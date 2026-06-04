@@ -29,6 +29,10 @@ import {
   PopoverCloseButton,
   Select,
   Input,
+  Show,
+  Hide,
+  SimpleGrid,
+  Flex,
 } from '@chakra-ui/react'
 import { FaAddressCard, FaCheckCircle } from 'react-icons/fa'
 import axios from 'axios'
@@ -74,6 +78,142 @@ interface BinanceTransaction {
   sellKyc?: {
     bankName: string | null
   } | null
+}
+
+function formatTxDate(createTime: string) {
+  return new Date(createTime).toLocaleString('es-VE', {
+    day: '2-digit',
+    month: '2-digit',
+    year: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function TransactionActions({ tx }: { tx: BinanceTransaction }) {
+  if (tx.tradeType === 'BUY') {
+    return (
+      <Popover>
+        <PopoverTrigger>
+          <IconButton
+            aria-label="Validar comprobante"
+            icon={<FaCheckCircle />}
+            size="sm"
+            colorScheme="blue"
+            variant="outline"
+          />
+        </PopoverTrigger>
+        <PopoverContent maxW={{ base: 'calc(100vw - 2rem)', md: '400px' }}>
+          <PopoverHeader fontWeight="bold">Validar Comprobante</PopoverHeader>
+          <PopoverCloseButton />
+          <PopoverBody>
+            <ReceiptValidator
+              transactionId={tx.id}
+              expectedAmount={tx.fiatAmount}
+              orderNumber={tx.orderNumber}
+            />
+          </PopoverBody>
+        </PopoverContent>
+      </Popover>
+    )
+  }
+
+  return (
+    <Popover>
+      <PopoverTrigger>
+        <IconButton
+          aria-label="Registrar KYC de venta"
+          icon={<FaAddressCard />}
+          size="sm"
+          colorScheme="purple"
+          variant="outline"
+        />
+      </PopoverTrigger>
+      <PopoverContent maxW={{ base: 'calc(100vw - 2rem)', md: '500px' }}>
+        <PopoverHeader fontWeight="bold">Registro KYC de Venta</PopoverHeader>
+        <PopoverCloseButton />
+        <PopoverBody>
+          <SellKycForm transactionId={tx.id} orderNumber={tx.orderNumber} />
+        </PopoverBody>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+function TransactionMobileCard({ tx }: { tx: BinanceTransaction }) {
+  const statusColor = tx.orderStatus === 'COMPLETED' ? 'green' : 'yellow'
+  const bankLabel = tx.sellKyc?.bankName || tx.paymentMethod || 'N/A'
+
+  return (
+    <Box
+      p={3}
+      borderWidth="1px"
+      borderColor="gray.200"
+      borderRadius="lg"
+      bg="white"
+      w="full"
+    >
+      <Flex justify="space-between" align="flex-start" gap={2} mb={2}>
+        <Badge colorScheme={tx.tradeType === 'BUY' ? 'green' : 'red'} fontSize="xs">
+          {tx.tradeType === 'BUY' ? 'Compra' : 'Venta'}
+        </Badge>
+        <Badge colorScheme={statusColor} fontSize="2xs" maxW="55%" textAlign="right">
+          {tx.orderStatus}
+        </Badge>
+      </Flex>
+
+      <Text fontSize="xs" color="gray.600" mb={2}>
+        {formatTxDate(tx.createTime)}
+      </Text>
+
+      <SimpleGrid columns={2} spacing={2} fontSize="sm" mb={2}>
+        <Box>
+          <Text fontSize="2xs" color="gray.500" textTransform="uppercase">
+            Cantidad
+          </Text>
+          <Text fontWeight="bold" wordBreak="break-word">
+            {tx.amount.toFixed(2)} {tx.asset}
+          </Text>
+        </Box>
+        <Box>
+          <Text fontSize="2xs" color="gray.500" textTransform="uppercase">
+            Total Bs.S
+          </Text>
+          <Text fontWeight="semibold" wordBreak="break-word">
+            {tx.fiatAmount.toLocaleString('es-VE', {
+              style: 'currency',
+              currency: 'VES',
+              maximumFractionDigits: 0,
+            })}
+          </Text>
+        </Box>
+        <Box gridColumn="1 / -1">
+          <Text fontSize="2xs" color="gray.500" textTransform="uppercase">
+            P. unitario
+          </Text>
+          <Text wordBreak="break-word">
+            {tx.unitPrice.toLocaleString('es-VE', {
+              style: 'currency',
+              currency: 'VES',
+              maximumFractionDigits: 0,
+            })}
+          </Text>
+        </Box>
+        <Box gridColumn="1 / -1">
+          <Text fontSize="2xs" color="gray.500" textTransform="uppercase">
+            Banco
+          </Text>
+          <Text noOfLines={2} wordBreak="break-word">
+            {bankLabel}
+          </Text>
+        </Box>
+      </SimpleGrid>
+
+      <Flex justify="flex-end" pt={1}>
+        <TransactionActions tx={tx} />
+      </Flex>
+    </Box>
+  )
 }
 
 export default function SyncedTransactions() {
@@ -148,8 +288,8 @@ export default function SyncedTransactions() {
   }
 
   return (
-    <Card>
-      <CardHeader>
+    <Card overflow="hidden" w="full" maxW="100%">
+      <CardHeader pb={{ base: 2, md: 4 }}>
         <VStack spacing={3} align="stretch">
           <HStack
             justify="space-between"
@@ -165,12 +305,17 @@ export default function SyncedTransactions() {
                 </Text>
               )}
             </Heading>
-            <HStack spacing={2} flexWrap="wrap" justify="flex-end">
+            <SimpleGrid
+              columns={{ base: 2, sm: 3, md: 6 }}
+              gap={2}
+              w="full"
+              alignItems="center"
+            >
               <Select
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value as DateFilter)}
                 size="sm"
-                maxW={{ base: '140px', md: '180px' }}
+                gridColumn={{ base: '1 / -1', sm: 'auto' }}
               >
                 <option value="today">Hoy</option>
                 <option value="yesterday">Ayer</option>
@@ -181,7 +326,6 @@ export default function SyncedTransactions() {
               </Select>
               <Input
                 size="sm"
-                maxW={{ base: '140px', md: '180px' }}
                 placeholder="Filtrar banco"
                 value={bankFilter}
                 onChange={(e) => setBankFilter(e.target.value)}
@@ -189,16 +333,16 @@ export default function SyncedTransactions() {
               <Input
                 type="date"
                 size="sm"
-                maxW={{ base: '130px', md: '150px' }}
                 value={startDateFilter}
                 onChange={(e) => setStartDateFilter(e.target.value)}
+                aria-label="Fecha desde"
               />
               <Input
                 type="date"
                 size="sm"
-                maxW={{ base: '130px', md: '150px' }}
                 value={endDateFilter}
                 onChange={(e) => setEndDateFilter(e.target.value)}
+                aria-label="Fecha hasta"
               />
               <Button
                 size="sm"
@@ -218,7 +362,7 @@ export default function SyncedTransactions() {
                 h="10px"
                 bg="green.400"
                 borderRadius="full"
-                display="inline-block"
+                justifySelf={{ base: 'center', md: 'end' }}
                 animation="pulse 2s infinite"
                 sx={{
                   '@keyframes pulse': {
@@ -227,11 +371,11 @@ export default function SyncedTransactions() {
                   },
                 }}
               />
-            </HStack>
+            </SimpleGrid>
           </HStack>
         </VStack>
       </CardHeader>
-      <CardBody>
+      <CardBody pt={0} overflow="hidden">
         {showDaySummary && !isLoading && (
           <Box
             mb={4}
@@ -274,123 +418,79 @@ export default function SyncedTransactions() {
             </Text>
           </VStack>
         ) : (
-          <TableContainer overflowX="auto" className="table-scroll" maxW="100%">
-            <Table variant="simple" size="sm" minW="720px">
-              <Thead>
-                <Tr>
-                  <Th w="110px">Fecha</Th>
-                  <Th w="80px">Tipo</Th>
-                  <Th w="120px">Cant.</Th>
-                  <Th w="130px">P. Unit.</Th>
-                  <Th w="130px">Total</Th>
-                  <Th>Banco</Th>
-                  <Th w="145px">Estado</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
+          <>
+            <Hide above="md">
+              <VStack spacing={3} align="stretch" w="full">
                 {transactions.map((tx) => (
-                  <Tr key={tx.id}>
-                    <Td fontSize="xs" whiteSpace="nowrap">
-                      {new Date(tx.createTime).toLocaleString('es-VE', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </Td>
-                    <Td>
-                      <Badge
-                        colorScheme={tx.tradeType === 'BUY' ? 'green' : 'red'}
-                      >
-                        {tx.tradeType === 'BUY' ? 'Compra' : 'Venta'}
-                      </Badge>
-                    </Td>
-                    <Td whiteSpace="nowrap">{tx.amount.toFixed(2)} {tx.asset}</Td>
-                    <Td whiteSpace="nowrap">
-                      {tx.unitPrice.toLocaleString('es-VE', {
-                        style: 'currency',
-                        currency: 'VES',
-                        maximumFractionDigits: 0,
-                      })}
-                    </Td>
-                    <Td whiteSpace="nowrap">
-                      {tx.fiatAmount.toLocaleString('es-VE', {
-                        style: 'currency',
-                        currency: 'VES',
-                        maximumFractionDigits: 0,
-                      })}
-                    </Td>
-                    <Td maxW="220px" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
-                      {tx.sellKyc?.bankName || tx.paymentMethod || 'N/A'}
-                    </Td>
-                    <Td>
-                      <HStack spacing={2}>
-                        <Badge
-                          colorScheme={
-                            tx.orderStatus === 'COMPLETED' ? 'green' : 'yellow'
-                          }
-                        >
-                          {tx.orderStatus}
-                        </Badge>
-                        {tx.tradeType === 'BUY' && (
-                          <Popover>
-                            <PopoverTrigger>
-                              <IconButton
-                                aria-label="Validar comprobante"
-                                icon={<FaCheckCircle />}
-                                size="xs"
-                                colorScheme="blue"
-                                variant="ghost"
-                              />
-                            </PopoverTrigger>
-                            <PopoverContent maxW="400px">
-                              <PopoverHeader fontWeight="bold">
-                                Validar Comprobante
-                              </PopoverHeader>
-                              <PopoverCloseButton />
-                              <PopoverBody>
-                                <ReceiptValidator
-                                  transactionId={tx.id}
-                                  expectedAmount={tx.fiatAmount}
-                                  orderNumber={tx.orderNumber}
-                                />
-                              </PopoverBody>
-                            </PopoverContent>
-                          </Popover>
-                        )}
-                        {tx.tradeType === 'SELL' && (
-                          <Popover>
-                            <PopoverTrigger>
-                              <IconButton
-                                aria-label="Registrar KYC de venta"
-                                icon={<FaAddressCard />}
-                                size="xs"
-                                colorScheme="purple"
-                                variant="ghost"
-                              />
-                            </PopoverTrigger>
-                            <PopoverContent maxW="500px">
-                              <PopoverHeader fontWeight="bold">
-                                Registro KYC de Venta
-                              </PopoverHeader>
-                              <PopoverCloseButton />
-                              <PopoverBody>
-                                <SellKycForm
-                                  transactionId={tx.id}
-                                  orderNumber={tx.orderNumber}
-                                />
-                              </PopoverBody>
-                            </PopoverContent>
-                          </Popover>
-                        )}
-                      </HStack>
-                    </Td>
-                  </Tr>
+                  <TransactionMobileCard key={tx.id} tx={tx} />
                 ))}
-              </Tbody>
-            </Table>
-          </TableContainer>
+              </VStack>
+            </Hide>
+
+            <Show above="md">
+              <TableContainer overflowX="auto" className="table-scroll" maxW="100%">
+                <Table variant="simple" size="sm">
+                  <Thead>
+                    <Tr>
+                      <Th>Fecha</Th>
+                      <Th>Tipo</Th>
+                      <Th isNumeric>Cant.</Th>
+                      <Th isNumeric>P. Unit.</Th>
+                      <Th isNumeric>Total</Th>
+                      <Th>Banco</Th>
+                      <Th>Estado</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {transactions.map((tx) => (
+                      <Tr key={tx.id}>
+                        <Td fontSize="xs" whiteSpace="nowrap">
+                          {formatTxDate(tx.createTime)}
+                        </Td>
+                        <Td>
+                          <Badge colorScheme={tx.tradeType === 'BUY' ? 'green' : 'red'}>
+                            {tx.tradeType === 'BUY' ? 'Compra' : 'Venta'}
+                          </Badge>
+                        </Td>
+                        <Td isNumeric whiteSpace="nowrap">
+                          {tx.amount.toFixed(2)} {tx.asset}
+                        </Td>
+                        <Td isNumeric whiteSpace="nowrap">
+                          {tx.unitPrice.toLocaleString('es-VE', {
+                            style: 'currency',
+                            currency: 'VES',
+                            maximumFractionDigits: 0,
+                          })}
+                        </Td>
+                        <Td isNumeric whiteSpace="nowrap">
+                          {tx.fiatAmount.toLocaleString('es-VE', {
+                            style: 'currency',
+                            currency: 'VES',
+                            maximumFractionDigits: 0,
+                          })}
+                        </Td>
+                        <Td maxW="200px" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
+                          {tx.sellKyc?.bankName || tx.paymentMethod || 'N/A'}
+                        </Td>
+                        <Td>
+                          <HStack spacing={2} flexWrap="wrap">
+                            <Badge
+                              colorScheme={
+                                tx.orderStatus === 'COMPLETED' ? 'green' : 'yellow'
+                              }
+                            >
+                              {tx.orderStatus}
+                            </Badge>
+                            <TransactionActions tx={tx} />
+                          </HStack>
+                        </Td>
+                      </Tr>
+                    ))}
+                  </Tbody>
+                </Table>
+              </TableContainer>
+            </Show>
+          </>
         )}
       </CardBody>
     </Card>
