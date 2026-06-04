@@ -151,8 +151,13 @@ export default function SyncedTransactions() {
     <Card>
       <CardHeader>
         <VStack spacing={3} align="stretch">
-          <HStack justify="space-between">
-            <Heading size="md">
+          <HStack
+            justify="space-between"
+            align={{ base: 'stretch', md: 'center' }}
+            flexDirection={{ base: 'column', md: 'row' }}
+            spacing={3}
+          >
+            <Heading size={{ base: 'sm', md: 'md' }}>
               Transacciones Sincronizadas
               {!isLoading && transactions.length > 0 && (
                 <Text as="span" fontSize="sm" fontWeight="normal" color="gray.500" ml={2}>
@@ -269,8 +274,8 @@ export default function SyncedTransactions() {
             </Text>
           </VStack>
         ) : (
-          <TableContainer overflowX="auto">
-            <Table variant="simple" size="sm" sx={{ tableLayout: 'fixed', width: '100%' }}>
+          <TableContainer overflowX="auto" className="table-scroll" maxW="100%">
+            <Table variant="simple" size="sm" minW="720px">
               <Thead>
                 <Tr>
                   <Th w="110px">Fecha</Th>

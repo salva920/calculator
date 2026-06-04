@@ -31,7 +31,17 @@ const theme = extendTheme({
         bg: 'gray.50',
         color: 'gray.800',
       },
+      'html, body': {
+        overflowX: 'hidden',
+      },
     },
+  },
+  breakpoints: {
+    base: '0px',
+    sm: '480px',
+    md: '768px',
+    lg: '992px',
+    xl: '1280px',
   },
   components: {
     Button: {

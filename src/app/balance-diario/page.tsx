@@ -1,20 +1,18 @@
 'use client'
 
-import { Box, Container, VStack, Heading } from '@chakra-ui/react'
+import { Box, VStack, Heading } from '@chakra-ui/react'
 import DailyBalance from '@/components/DailyBalance'
 
 export default function BalanceDiarioPage() {
   return (
-    <Container maxW="container.xl" py={8}>
-      <VStack spacing={6} align="stretch">
-        <Heading size="lg" color="green.600">
-          Balance Diario
-        </Heading>
-        <Box w="full">
-          <DailyBalance days={7} />
-        </Box>
-      </VStack>
-    </Container>
+    <VStack spacing={{ base: 4, md: 6 }} align="stretch" w="full">
+      <Heading size={{ base: 'md', md: 'lg' }} color="green.600">
+        Balance Diario
+      </Heading>
+      <Box w="full" minW="0">
+        <DailyBalance days={7} />
+      </Box>
+    </VStack>
   )
 }
 

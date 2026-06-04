@@ -1,6 +1,6 @@
 'use client'
 
-import { Box, Container, VStack, HStack, Heading } from '@chakra-ui/react'
+import { Box, VStack, HStack, Heading } from '@chakra-ui/react'
 import CalculatorForm from '@/components/CalculatorForm'
 import ResultsDisplay from '@/components/ResultsDisplay'
 import ExecutiveSummary from '@/components/ExecutiveSummary'
@@ -12,26 +12,29 @@ export default function CalculadoraPage() {
   const [formData, setFormData] = useState<FormData | null>(null)
 
   return (
-    <Container maxW="container.xl" py={8}>
-      <VStack spacing={6} align="stretch">
-        <Heading size="lg" color="blue.600">
-          Calculadora de Estrategia
-        </Heading>
-        <HStack spacing={8} align="start" w="full">
-          <Box flex="1">
-            <CalculatorForm onResultsChange={setResults} onFormDataChange={setFormData} />
-          </Box>
-          <Box flex="1">
-            <ResultsDisplay results={results} formData={formData} />
-          </Box>
-        </HStack>
-        {results && formData && (
-          <Box w="full">
-            <ExecutiveSummary results={results} formData={formData} />
-          </Box>
-        )}
-      </VStack>
-    </Container>
+    <VStack spacing={{ base: 4, md: 6 }} align="stretch" w="full">
+      <Heading size={{ base: 'md', md: 'lg' }} color="blue.600">
+        Calculadora de Estrategia
+      </Heading>
+      <HStack
+        spacing={{ base: 4, md: 8 }}
+        align="start"
+        w="full"
+        flexDirection={{ base: 'column', lg: 'row' }}
+      >
+        <Box flex={{ base: 'none', lg: 1 }} w="full" minW="0">
+          <CalculatorForm onResultsChange={setResults} onFormDataChange={setFormData} />
+        </Box>
+        <Box flex={{ base: 'none', lg: 1 }} w="full" minW="0">
+          <ResultsDisplay results={results} formData={formData} />
+        </Box>
+      </HStack>
+      {results && formData && (
+        <Box w="full" minW="0">
+          <ExecutiveSummary results={results} formData={formData} />
+        </Box>
+      )}
+    </VStack>
   )
 }
 

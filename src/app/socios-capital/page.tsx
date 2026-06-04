@@ -1,7 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { Container, Heading, Text, VStack } from '@chakra-ui/react'
+import { Heading, Text, VStack } from '@chakra-ui/react'
 
 /** Evita hidratación inconsistente del NumberInput y del panel complejo en esta ruta. */
 const CapitalPartnersPanel = dynamic(() => import('@/components/CapitalPartnersPanel'), {
@@ -15,10 +15,9 @@ const CapitalPartnersPanel = dynamic(() => import('@/components/CapitalPartnersP
 
 export default function SociosCapitalPage() {
   return (
-    <Container maxW="container.xl" py={8} color="gray.800">
-      <VStack align="stretch" spacing={6}>
-        <VStack align="start" spacing={1}>
-          <Heading size="lg" color="purple.600">
+    <VStack align="stretch" spacing={{ base: 4, md: 6 }} w="full" color="gray.800">
+      <VStack align="start" spacing={1}>
+        <Heading size={{ base: 'md', md: 'lg' }} color="purple.600">
             Socios de capital (USDT / VES)
           </Heading>
           <Text fontSize="sm" color="gray.600">
@@ -26,8 +25,7 @@ export default function SociosCapitalPage() {
             (America/Caracas) y un interés lineal simple: capital × (% diario) × días.
           </Text>
         </VStack>
-        <CapitalPartnersPanel />
-      </VStack>
-    </Container>
+      <CapitalPartnersPanel />
+    </VStack>
   )
 }
