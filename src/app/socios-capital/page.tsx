@@ -1,13 +1,13 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { Heading, Text, VStack } from '@chakra-ui/react'
+import { Text, VStack } from '@chakra-ui/react'
+import PageHeader from '@/components/ui/PageHeader'
 
-/** Evita hidratación inconsistente del NumberInput y del panel complejo en esta ruta. */
 const CapitalPartnersPanel = dynamic(() => import('@/components/CapitalPartnersPanel'), {
   ssr: false,
   loading: () => (
-    <Text py={4} color="gray.600">
+    <Text py={8} color="gray.500" textAlign="center">
       Cargando panel de socios…
     </Text>
   ),
@@ -15,16 +15,12 @@ const CapitalPartnersPanel = dynamic(() => import('@/components/CapitalPartnersP
 
 export default function SociosCapitalPage() {
   return (
-    <VStack align="stretch" spacing={{ base: 4, md: 6 }} w="full" color="gray.800">
-      <VStack align="start" spacing={1}>
-        <Heading size={{ base: 'md', md: 'lg' }} color="purple.600">
-            Socios de capital (USDT / VES)
-          </Heading>
-          <Text fontSize="sm" color="gray.600">
-            Gestión de inversiones y reparto. La meta acumulada desde el ingreso usa días calendario en Venezuela
-            (America/Caracas) y un interés lineal simple: capital × (% diario) × días.
-          </Text>
-        </VStack>
+    <VStack align="stretch" spacing={{ base: 4, md: 6 }} w="full">
+      <PageHeader
+        title="Socios de capital"
+        description="Gestión de inversiones USDT/VES, metas y reparto con interés lineal por días (zona Caracas)."
+        accent="purple"
+      />
       <CapitalPartnersPanel />
     </VStack>
   )

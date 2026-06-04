@@ -1,6 +1,7 @@
 'use client'
 
-import { Box, VStack, HStack, Heading } from '@chakra-ui/react'
+import { Box, VStack, HStack } from '@chakra-ui/react'
+import PageHeader from '@/components/ui/PageHeader'
 import CalculatorForm from '@/components/CalculatorForm'
 import ResultsDisplay from '@/components/ResultsDisplay'
 import ExecutiveSummary from '@/components/ExecutiveSummary'
@@ -13,11 +14,13 @@ export default function CalculadoraPage() {
 
   return (
     <VStack spacing={{ base: 4, md: 6 }} align="stretch" w="full">
-      <Heading size={{ base: 'md', md: 'lg' }} color="blue.600">
-        Calculadora de Estrategia
-      </Heading>
+      <PageHeader
+        title="Calculadora de estrategia"
+        description="Simula márgenes, comisiones y rentabilidad antes de publicar tus anuncios P2P."
+        accent="blue"
+      />
       <HStack
-        spacing={{ base: 4, md: 8 }}
+        spacing={{ base: 4, md: 6 }}
         align="start"
         w="full"
         flexDirection={{ base: 'column', lg: 'row' }}
@@ -37,4 +40,3 @@ export default function CalculadoraPage() {
     </VStack>
   )
 }
-

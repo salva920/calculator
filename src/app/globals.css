@@ -1,3 +1,14 @@
+:root {
+  --app-bg: #f1f5f9;
+  --app-card: #ffffff;
+  --app-accent: #f59e0b;
+  --app-accent-soft: #fffbeb;
+  --app-text: #0f172a;
+  --app-muted: #64748b;
+  --app-border: #e2e8f0;
+  --font-jakarta: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
 * {
   box-sizing: border-box;
   padding: 0;
@@ -18,6 +29,7 @@ body {
 body {
   min-height: 100dvh;
   padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) 0 env(safe-area-inset-left, 0);
+  background: var(--app-bg);
 }
 
 a {
@@ -25,15 +37,24 @@ a {
   text-decoration: none;
 }
 
-/* Tablas y grids anchos: scroll horizontal en móvil */
 .chakra-table__container,
 .table-scroll {
   -webkit-overflow-scrolling: touch;
   overflow-x: auto;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+@keyframes soft-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
   }
+  50% {
+    opacity: 0.55;
+    transform: scale(0.92);
+  }
+}
+
+.live-dot {
+  animation: soft-pulse 2s ease-in-out infinite;
 }

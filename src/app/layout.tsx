@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
+import { Plus_Jakarta_Sans } from 'next/font/google'
 import { Providers } from './providers'
 import Navigation from '@/components/Navigation'
 import AppMain from '@/components/AppMain'
@@ -8,7 +8,11 @@ import InstallPwaBanner from '@/components/InstallPwaBanner'
 import PwaRegister from '@/components/PwaRegister'
 import './globals.css'
 
-const inter = Inter({ subsets: ['latin'] })
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-jakarta',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'Binance P2P Calculator',
@@ -33,7 +37,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
-  themeColor: '#f6ad55',
+  themeColor: '#f59e0b',
   viewportFit: 'cover',
 }
 
@@ -44,7 +48,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body className={inter.className}>
+      <body className={jakarta.variable} style={{ fontFamily: 'var(--font-jakarta)' }}>
         <Providers>
           <PwaRegister />
           <Navigation />

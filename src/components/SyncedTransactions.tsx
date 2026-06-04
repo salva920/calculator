@@ -146,12 +146,15 @@ function TransactionMobileCard({ tx }: { tx: BinanceTransaction }) {
 
   return (
     <Box
-      p={3}
+      p={4}
       borderWidth="1px"
-      borderColor="gray.200"
-      borderRadius="lg"
-      bg="white"
+      borderColor="surface.border"
+      borderRadius="2xl"
+      bg="surface.card"
+      boxShadow="card"
       w="full"
+      transition="box-shadow 0.2s"
+      _hover={{ boxShadow: 'md' }}
     >
       <Flex justify="space-between" align="flex-start" gap={2} mb={2}>
         <Badge colorScheme={tx.tradeType === 'BUY' ? 'green' : 'red'} fontSize="xs">
@@ -289,7 +292,12 @@ export default function SyncedTransactions() {
 
   return (
     <Card overflow="hidden" w="full" maxW="100%">
-      <CardHeader pb={{ base: 2, md: 4 }}>
+      <CardHeader
+        pb={{ base: 2, md: 4 }}
+        borderBottomWidth="1px"
+        borderColor="surface.border"
+        bg="surface.muted"
+      >
         <VStack spacing={3} align="stretch">
           <HStack
             justify="space-between"
@@ -297,8 +305,8 @@ export default function SyncedTransactions() {
             flexDirection={{ base: 'column', md: 'row' }}
             spacing={3}
           >
-            <Heading size={{ base: 'sm', md: 'md' }}>
-              Transacciones Sincronizadas
+            <Heading size={{ base: 'sm', md: 'md' }} color="gray.900">
+              Transacciones sincronizadas
               {!isLoading && transactions.length > 0 && (
                 <Text as="span" fontSize="sm" fontWeight="normal" color="gray.500" ml={2}>
                   ({transactions.length})
@@ -358,18 +366,12 @@ export default function SyncedTransactions() {
               </Button>
               <Box
                 as="span"
+                className="live-dot"
                 w="10px"
                 h="10px"
                 bg="green.400"
                 borderRadius="full"
                 justifySelf={{ base: 'center', md: 'end' }}
-                animation="pulse 2s infinite"
-                sx={{
-                  '@keyframes pulse': {
-                    '0%, 100%': { opacity: 1 },
-                    '50%': { opacity: 0.5 },
-                  },
-                }}
               />
             </SimpleGrid>
           </HStack>
@@ -379,13 +381,13 @@ export default function SyncedTransactions() {
         {showDaySummary && !isLoading && (
           <Box
             mb={4}
-            p={3}
-            borderRadius="md"
-            bg="red.50"
+            p={4}
+            borderRadius="xl"
+            bg="brand.50"
             borderWidth="1px"
-            borderColor="red.100"
+            borderColor="brand.100"
           >
-            <Text fontSize="sm" fontWeight="bold" color="red.700" mb={1}>
+            <Text fontSize="sm" fontWeight="bold" color="brand.800" mb={1}>
               Resumen ventas completadas
             </Text>
             <HStack spacing={4} flexWrap="wrap">

@@ -10,111 +10,135 @@ import {
   DrawerHeader,
   DrawerOverlay,
   Flex,
-  Heading,
   HStack,
+  Icon,
   IconButton,
   Link,
   Spacer,
   Text,
-  useColorModeValue,
   useDisclosure,
   VStack,
-  Badge,
   Hide,
   Show,
 } from '@chakra-ui/react'
 import NextLink from 'next/link'
 import { usePathname } from 'next/navigation'
-import { motion } from 'framer-motion'
-import { FaBitcoin, FaBars, FaChartLine, FaExternalLinkAlt } from 'react-icons/fa'
-
-const MotionBox = motion(Box)
+import {
+  FaBitcoin,
+  FaBars,
+  FaCalculator,
+  FaChartLine,
+  FaExternalLinkAlt,
+  FaLink,
+  FaUsers,
+  FaWallet,
+} from 'react-icons/fa'
 
 const NAV_LINKS = [
-  { href: '/', label: 'Resumen' },
-  { href: '/calculadora', label: 'Calculadora' },
-  { href: '/balance-diario', label: 'Balance Diario' },
-  { href: '/conexion-binance', label: 'Conexión Binance' },
-  { href: '/socios-capital', label: 'Socios capital' },
+  { href: '/', label: 'Resumen', icon: FaChartLine },
+  { href: '/calculadora', label: 'Calculadora', icon: FaCalculator },
+  { href: '/balance-diario', label: 'Balance', icon: FaWallet },
+  { href: '/conexion-binance', label: 'Binance', icon: FaLink },
+  { href: '/socios-capital', label: 'Socios', icon: FaUsers },
 ] as const
 
 export default function Navigation() {
   const { isOpen, onOpen, onClose } = useDisclosure()
   const pathname = usePathname()
-  const bg = useColorModeValue('white', 'gray.800')
-  const borderColor = useColorModeValue('gray.200', 'gray.700')
-
-  const navButtonProps = (href: string) => ({
-    as: NextLink,
-    href,
-    variant: pathname === href ? 'solid' : 'ghost',
-    colorScheme: pathname === href ? 'orange' : 'gray',
-    size: 'sm' as const,
-    justifyContent: 'flex-start' as const,
-    w: 'full',
-  })
 
   return (
-    <MotionBox
-      initial={{ opacity: 0, y: -12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35 }}
-    >
+    <>
       <Box
-        as="nav"
-        bg={bg}
-        borderBottom="1px"
-        borderColor={borderColor}
-        px={{ base: 3, md: 6 }}
-        py={{ base: 2, md: 4 }}
+        as="header"
         position="sticky"
         top={0}
         zIndex={1000}
-        backdropFilter="blur(10px)"
+        px={{ base: 3, md: 4 }}
+        pt={{ base: 2, md: 3 }}
+        pb={0}
       >
-        <Flex align="center" maxW="container.xl" mx="auto" gap={2}>
-          <NextLink href="/">
-            <HStack spacing={2}>
-              <FaBitcoin color="#F7931A" size={22} />
-              <Heading
-                as="span"
-                size={{ base: 'sm', md: 'lg' }}
-                bgGradient="linear(to-r, orange.400, yellow.400)"
-                bgClip="text"
-                lineHeight="shorter"
-              >
-                <Show above="sm">Binance P2P Calculator</Show>
+        <Flex
+          align="center"
+          maxW="container.xl"
+          mx="auto"
+          bg="rgba(255,255,255,0.92)"
+          backdropFilter="blur(12px)"
+          borderWidth="1px"
+          borderColor="surface.border"
+          borderRadius="2xl"
+          boxShadow="nav"
+          px={{ base: 3, md: 4 }}
+          py={{ base: 2, md: 3 }}
+          gap={3}
+        >
+          <HStack as={NextLink} href="/" spacing={2.5} flexShrink={0}>
+            <Flex
+              align="center"
+              justify="center"
+              w={9}
+              h={9}
+              borderRadius="xl"
+              bg="linear-gradient(135deg, #F0B90B 0%, #F59E0B 100%)"
+              boxShadow="0 4px 12px rgba(245, 158, 11, 0.35)"
+            >
+              <FaBitcoin color="white" size={18} />
+            </Flex>
+            <Box>
+              <Text fontWeight="700" fontSize={{ base: 'sm', md: 'md' }} color="gray.900" lineHeight="1.2">
+                <Show above="sm">P2P Calculator</Show>
                 <Hide above="sm">P2P Calc</Hide>
-              </Heading>
-            </HStack>
-          </NextLink>
+              </Text>
+              <Text fontSize="2xs" color="gray.500" display={{ base: 'none', sm: 'block' }}>
+                USDT / VES · Tiempo real
+              </Text>
+            </Box>
+          </HStack>
 
           <Spacer />
 
           <Show above="lg">
-            <VStack align="flex-end" spacing={2} ml={4}>
-              <HStack spacing={2} flexWrap="wrap" justify="flex-end">
-                <Badge colorScheme="green" fontSize="xs" px={2} py={0.5} rounded="full">
-                  USDT/VES
-                </Badge>
-                <Badge colorScheme="blue" fontSize="xs" px={2} py={0.5} rounded="full">
-                  <HStack spacing={1}>
-                    <FaChartLine size={10} />
-                    <Text>Tiempo Real</Text>
-                  </HStack>
-                </Badge>
-                <Button as={Link} href="https://p2p.binance.com" isExternal variant="outline" size="sm">
-                  Ir a Binance P2P
-                </Button>
-              </HStack>
-              <HStack spacing={1} flexWrap="wrap" justify="flex-end">
-                {NAV_LINKS.map(({ href, label }) => (
-                  <Button key={href} {...navButtonProps(href)}>
+            <HStack
+              spacing={1}
+              bg="surface.muted"
+              p={1}
+              borderRadius="full"
+              borderWidth="1px"
+              borderColor="surface.border"
+            >
+              {NAV_LINKS.map(({ href, label, icon }) => {
+                const active = pathname === href
+                return (
+                  <Button
+                    key={href}
+                    as={NextLink}
+                    href={href}
+                    variant={active ? 'solid' : 'ghost'}
+                    colorScheme={active ? 'brand' : 'gray'}
+                    size="sm"
+                    borderRadius="full"
+                    leftIcon={<Icon as={icon} boxSize={3.5} />}
+                    fontWeight="600"
+                  >
                     {label}
                   </Button>
-                ))}
-              </HStack>
-            </VStack>
+                )
+              })}
+            </HStack>
+          </Show>
+
+          <Show above="lg">
+            <Button
+              as={Link}
+              href="https://p2p.binance.com"
+              isExternal
+              size="sm"
+              variant="outline"
+              borderRadius="full"
+              borderColor="surface.border"
+              leftIcon={<FaExternalLinkAlt size={12} />}
+            >
+              Binance P2P
+            </Button>
           </Show>
 
           <Show below="lg">
@@ -122,6 +146,7 @@ export default function Navigation() {
               aria-label="Abrir menú"
               icon={<FaBars />}
               variant="ghost"
+              borderRadius="xl"
               onClick={onOpen}
             />
           </Show>
@@ -129,24 +154,40 @@ export default function Navigation() {
       </Box>
 
       <Drawer isOpen={isOpen} placement="right" onClose={onClose} size="xs">
-        <DrawerOverlay />
-        <DrawerContent>
-          <DrawerCloseButton />
-          <DrawerHeader borderBottomWidth="1px">Menú</DrawerHeader>
-          <DrawerBody py={4}>
+        <DrawerOverlay backdropFilter="blur(4px)" />
+        <DrawerContent borderTopLeftRadius="2xl" borderBottomLeftRadius="2xl">
+          <DrawerCloseButton borderRadius="full" />
+          <DrawerHeader fontWeight="700">Menú</DrawerHeader>
+          <DrawerBody pb={8}>
             <VStack align="stretch" spacing={2}>
-              {NAV_LINKS.map(({ href, label }) => (
-                <Button key={href} {...navButtonProps(href)} onClick={onClose}>
-                  {label}
-                </Button>
-              ))}
+              {NAV_LINKS.map(({ href, label, icon }) => {
+                const active = pathname === href
+                return (
+                  <Button
+                    key={href}
+                    as={NextLink}
+                    href={href}
+                    onClick={onClose}
+                    variant={active ? 'solid' : 'ghost'}
+                    colorScheme={active ? 'brand' : 'gray'}
+                    justifyContent="flex-start"
+                    leftIcon={<Icon as={icon} />}
+                    borderRadius="xl"
+                    size="md"
+                  >
+                    {label}
+                  </Button>
+                )
+              })}
               <Button
                 as={Link}
                 href="https://p2p.binance.com"
                 isExternal
                 variant="outline"
+                borderRadius="xl"
                 leftIcon={<FaExternalLinkAlt />}
                 onClick={onClose}
+                mt={2}
               >
                 Ir a Binance P2P
               </Button>
@@ -154,6 +195,6 @@ export default function Navigation() {
           </DrawerBody>
         </DrawerContent>
       </Drawer>
-    </MotionBox>
+    </>
   )
 }

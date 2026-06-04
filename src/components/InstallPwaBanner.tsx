@@ -8,7 +8,6 @@ import {
   Button,
   CloseButton,
   Flex,
-  useColorModeValue,
 } from '@chakra-ui/react'
 
 interface BeforeInstallPromptEvent extends Event {
@@ -19,7 +18,6 @@ interface BeforeInstallPromptEvent extends Event {
 export default function InstallPwaBanner() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [dismissed, setDismissed] = useState(false)
-  const bg = useColorModeValue('orange.50', 'gray.700')
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -42,22 +40,30 @@ export default function InstallPwaBanner() {
     <Box
       display={{ base: 'block', lg: 'none' }}
       position="fixed"
-      bottom={{ base: 'calc(56px + env(safe-area-inset-bottom, 0px))', lg: 4 }}
+      bottom={{ base: 'calc(72px + env(safe-area-inset-bottom, 0px))', lg: 4 }}
       left={3}
       right={3}
       zIndex={999}
     >
-      <Alert status="info" borderRadius="lg" bg={bg} boxShadow="md" py={2}>
+      <Alert
+        status="info"
+        borderRadius="2xl"
+        bg="surface.card"
+        borderWidth="1px"
+        borderColor="surface.border"
+        boxShadow="float"
+        py={3}
+      >
         <Box flex="1">
-          <AlertDescription fontSize="sm">
-            Instala la app en tu teléfono para acceso rápido desde la pantalla de inicio.
+          <AlertDescription fontSize="sm" color="gray.700">
+            Instala la app en tu teléfono para abrirla como una aplicación nativa.
           </AlertDescription>
         </Box>
-        <Flex gap={1} align="center" flexShrink={0}>
-          <Button size="xs" colorScheme="orange" onClick={handleInstall}>
+        <Flex gap={2} align="center" flexShrink={0}>
+          <Button size="sm" colorScheme="brand" borderRadius="full" onClick={handleInstall}>
             Instalar
           </Button>
-          <CloseButton size="sm" onClick={() => setDismissed(true)} />
+          <CloseButton size="sm" borderRadius="full" onClick={() => setDismissed(true)} />
         </Flex>
       </Alert>
     </Box>

@@ -279,10 +279,12 @@ export default function P2PDashboard() {
 
   return (
     <Card>
-      <CardHeader pb={3}>
+      <CardHeader pb={3} borderBottomWidth="1px" borderColor="surface.border" bg="surface.muted">
         <VStack spacing={2} align="stretch">
-          {/* Indicador de estado en línea - En la parte superior del header */}
           <HStack justify="space-between" flexWrap="wrap">
+            <Text fontSize="sm" fontWeight="700" color="gray.700">
+              Panel en vivo
+            </Text>
             <HStack spacing={2}>
               <Tooltip label="Sincronizar transacciones ahora">
                 <IconButton
@@ -300,18 +302,12 @@ export default function P2PDashboard() {
             <HStack spacing={3}>
               <Box
                 as="span"
+                className="live-dot"
                 w="10px"
                 h="10px"
                 bg="green.400"
                 borderRadius="full"
                 display="inline-block"
-                animation="pulse 2s infinite"
-                sx={{
-                  '@keyframes pulse': {
-                    '0%, 100%': { opacity: 1 },
-                    '50%': { opacity: 0.5 },
-                  },
-                }}
               />
             </HStack>
           </HStack>
