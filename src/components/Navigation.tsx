@@ -32,6 +32,7 @@ import {
   FaLink,
   FaUsers,
   FaWallet,
+  FaSignOutAlt,
 } from 'react-icons/fa'
 
 const NAV_LINKS = [
@@ -45,6 +46,11 @@ const NAV_LINKS = [
 export default function Navigation() {
   const { isOpen, onOpen, onClose } = useDisclosure()
   const pathname = usePathname()
+
+  async function handleLogout() {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    window.location.href = '/login'
+  }
 
   return (
     <>
@@ -127,18 +133,28 @@ export default function Navigation() {
           </Show>
 
           <Show above="lg">
-            <Button
-              as={Link}
-              href="https://p2p.binance.com"
-              isExternal
-              size="sm"
-              variant="outline"
-              borderRadius="full"
-              borderColor="surface.border"
-              leftIcon={<FaExternalLinkAlt size={12} />}
-            >
-              Binance P2P
-            </Button>
+            <HStack spacing={2}>
+              <Button
+                as={Link}
+                href="https://p2p.binance.com"
+                isExternal
+                size="sm"
+                variant="outline"
+                borderRadius="full"
+                borderColor="surface.border"
+                leftIcon={<FaExternalLinkAlt size={12} />}
+              >
+                Binance P2P
+              </Button>
+              <IconButton
+                aria-label="Cerrar sesión"
+                icon={<FaSignOutAlt />}
+                size="sm"
+                variant="ghost"
+                borderRadius="full"
+                onClick={handleLogout}
+              />
+            </HStack>
           </Show>
 
           <Show below="lg">
@@ -190,6 +206,19 @@ export default function Navigation() {
                 mt={2}
               >
                 Ir a Binance P2P
+              </Button>
+              <Button
+                variant="ghost"
+                colorScheme="red"
+                borderRadius="xl"
+                leftIcon={<FaSignOutAlt />}
+                onClick={() => {
+                  onClose()
+                  handleLogout()
+                }}
+                mt={2}
+              >
+                Salir
               </Button>
             </VStack>
           </DrawerBody>

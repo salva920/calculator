@@ -3,12 +3,23 @@
 import { ChakraProvider } from '@chakra-ui/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState } from 'react'
+import { usePathname } from 'next/navigation'
 import theme from '@/lib/theme'
 import { useBinanceAutoSync } from '@/hooks/useBinanceAutoSync'
 
-function AutoSyncWrapper({ children }: { children: React.ReactNode }) {
+function AutoSyncRunner() {
   useBinanceAutoSync()
-  return <>{children}</>
+  return null
+}
+
+function AutoSyncWrapper({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  return (
+    <>
+      {pathname !== '/login' && <AutoSyncRunner />}
+      {children}
+    </>
+  )
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {

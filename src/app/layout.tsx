@@ -1,10 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Plus_Jakarta_Sans } from 'next/font/google'
 import { Providers } from './providers'
-import Navigation from '@/components/Navigation'
-import AppMain from '@/components/AppMain'
-import MobileBottomNav from '@/components/MobileBottomNav'
-import InstallPwaBanner from '@/components/InstallPwaBanner'
+import AppShell from '@/components/AppShell'
 import PwaRegister from '@/components/PwaRegister'
 import './globals.css'
 
@@ -51,10 +48,7 @@ export default function RootLayout({
       <body className={jakarta.variable} style={{ fontFamily: 'var(--font-jakarta)' }}>
         <Providers>
           <PwaRegister />
-          <Navigation />
-          <AppMain>{children}</AppMain>
-          <InstallPwaBanner />
-          <MobileBottomNav />
+          <AppShell>{children}</AppShell>
         </Providers>
       </body>
     </html>
