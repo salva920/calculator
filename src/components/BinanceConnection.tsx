@@ -25,6 +25,7 @@ import {
 } from '@chakra-ui/react'
 import { FaCheckCircle, FaTimesCircle } from 'react-icons/fa'
 import axios from 'axios'
+import { requestBinanceSync } from '@/lib/binance-sync-client'
 
 interface BinanceCredentials {
   id: string
@@ -47,37 +48,6 @@ export default function BinanceConnection() {
   useEffect(() => {
     checkConnection()
   }, [])
-
-  // Sincronizar automáticamente cuando esté conectado
-  useEffect(() => {
-    if (!isConnected || !credentials?.syncEnabled) return
-    
-    // Sincronizar inmediatamente al conectar
-    const initialSync = async () => {
-      try {
-        await axios.post('/api/binance/sync')
-        await checkConnection()
-        window.dispatchEvent(new CustomEvent('binance-sync-completed'))
-      } catch (error) {
-        console.error('Error en sincronización inicial:', error)
-      }
-    }
-    
-    initialSync()
-    
-    // Sincronizar automáticamente cada 2 minutos
-    const autoSyncInterval = setInterval(async () => {
-      try {
-        await axios.post('/api/binance/sync')
-        await checkConnection()
-        window.dispatchEvent(new CustomEvent('binance-sync-completed'))
-      } catch (error) {
-        console.error('Error en sincronización automática:', error)
-      }
-    }, 120000) // 2 minutos
-    
-    return () => clearInterval(autoSyncInterval)
-  }, [isConnected, credentials?.syncEnabled])
 
   const checkConnection = async () => {
     try {
@@ -123,21 +93,15 @@ export default function BinanceConnection() {
         await checkConnection()
         
         // Sincronizar automáticamente después de conectar
-        try {
-          const syncResponse = await axios.post('/api/binance/sync')
-          if (syncResponse.data.success) {
-            toast({
-              title: 'Sincronización completada',
-              description: `${syncResponse.data.newTransactions} nuevas transacciones sincronizadas`,
-              status: 'success',
-              duration: 3000,
-              isClosable: true,
-            })
-            // Disparar evento para actualizar componentes
-            window.dispatchEvent(new CustomEvent('binance-sync-completed'))
-          }
-        } catch (syncError) {
-          console.error('Error en sincronización automática:', syncError)
+        const syncResponse = await requestBinanceSync({ force: true })
+        if (syncResponse.success && !syncResponse.skipped) {
+          toast({
+            title: 'Sincronización completada',
+            description: `${syncResponse.newTransactions ?? 0} nuevas transacciones sincronizadas`,
+            status: 'success',
+            duration: 3000,
+            isClosable: true,
+          })
         }
       }
     } catch (error: any) {
@@ -245,7 +209,7 @@ export default function BinanceConnection() {
                   <Text fontWeight="bold">Sincronización Automática Activa</Text>
                   <Text>
                     Las transacciones se sincronizan automáticamente cada 2 minutos.
-                    El dashboard y las transacciones se actualizan en tiempo real cada 5 segundos.
+                    El dashboard y las transacciones se actualizan desde la base de datos cada 10 segundos; Binance se consulta como máximo cada 2 minutos.
                   </Text>
                 </AlertDescription>
               </Alert>

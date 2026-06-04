@@ -2,57 +2,32 @@
 
 import { useEffect } from 'react'
 import axios from 'axios'
+import {
+  getBinanceSyncIntervalMs,
+  requestBinanceSync,
+} from '@/lib/binance-sync-client'
 
 /**
- * Hook global para sincronización automática de Binance
- * Se ejecuta independientemente de qué componente esté montado
+ * Única sincronización automática con Binance en toda la app (cada 2 min).
+ * El dashboard y conexión ya no llaman /api/binance/sync por su cuenta.
  */
 export function useBinanceAutoSync() {
   useEffect(() => {
-    let autoSyncInterval: NodeJS.Timeout | null = null
-
     const checkAndSync = async () => {
       try {
         const credentialsResponse = await axios.get('/api/binance/credentials')
-        if (credentialsResponse.data.success && credentialsResponse.data.connected) {
-          const credentials = credentialsResponse.data.credentials
+        if (!credentialsResponse.data.success || !credentialsResponse.data.connected) return
+        if (!credentialsResponse.data.credentials?.syncEnabled) return
 
-          if (credentials.syncEnabled) {
-            try {
-              await axios.post('/api/binance/sync', {}, { timeout: 120000 })
-              window.dispatchEvent(new CustomEvent('binance-sync-completed'))
-            } catch (error) {
-              if (axios.isAxiosError(error)) {
-                const status = error.response?.status
-                const msg = error.response?.data?.error as string | undefined
-                // Respuestas esperadas: sin credenciales, sync deshabilitado
-                if (status === 400) {
-                  if (
-                    msg?.includes('ENCRYPTION_KEY') ||
-                    msg?.includes('credenciales de Binance') ||
-                    error.response?.data?.code === 'CREDENTIALS_DECRYPT_FAILED'
-                  ) {
-                    return
-                  }
-                  return
-                }
-              }
-              console.error('Error en sincronización automática:', error)
-            }
-          }
-        }
+        await requestBinanceSync()
       } catch {
-        // Sin credenciales configuradas
+        // Sin credenciales o error de red
       }
     }
 
-    checkAndSync()
-    autoSyncInterval = setInterval(checkAndSync, 120000)
+    void checkAndSync()
+    const autoSyncInterval = setInterval(checkAndSync, getBinanceSyncIntervalMs())
 
-    return () => {
-      if (autoSyncInterval) {
-        clearInterval(autoSyncInterval)
-      }
-    }
+    return () => clearInterval(autoSyncInterval)
   }, [])
 }

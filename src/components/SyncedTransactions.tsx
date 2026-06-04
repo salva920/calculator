@@ -36,6 +36,8 @@ import {
 } from '@chakra-ui/react'
 import { FaAddressCard, FaCheckCircle } from 'react-icons/fa'
 import axios from 'axios'
+import { requestBinanceSync } from '@/lib/binance-sync-client'
+import { UI_POLL_DATABASE_MS } from '@/lib/sync-constants'
 import ReceiptValidator from './ReceiptValidator'
 import SellKycForm from './SellKycForm'
 
@@ -231,13 +233,17 @@ export default function SyncedTransactions() {
   useEffect(() => {
     loadTransactions()
 
-    // Al ver ayer u otra fecha pasada, forzar sync profundo de ese día
     if (dateFilter === 'yesterday') {
-      axios.post('/api/binance/sync', { backfillFrom: getYesterdayYmd() }).catch(() => {})
+      const ymd = getYesterdayYmd()
+      const key = `p2p-backfill-${ymd}`
+      if (typeof sessionStorage !== 'undefined' && !sessionStorage.getItem(key)) {
+        void requestBinanceSync({ backfillFrom: ymd, force: true }).then(() => {
+          sessionStorage.setItem(key, '1')
+        })
+      }
     }
-    
-    // Actualizar cada 5 segundos para tiempo real
-    const interval = setInterval(loadTransactions, 5000)
+
+    const interval = setInterval(loadTransactions, UI_POLL_DATABASE_MS)
     
     // Escuchar eventos de sincronización
     const handleSync = () => {

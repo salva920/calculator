@@ -30,6 +30,8 @@ import {
 } from '@chakra-ui/react'
 import { FaChartLine, FaDollarSign, FaShoppingCart, FaArrowUp, FaArrowDown, FaSync } from 'react-icons/fa'
 import axios from 'axios'
+import { requestBinanceSync } from '@/lib/binance-sync-client'
+import { UI_POLL_DATABASE_MS } from '@/lib/sync-constants'
 import InsightPanel from '@/components/ui/InsightPanel'
 
 interface DashboardMetrics {
@@ -112,32 +114,15 @@ export default function P2PDashboard() {
   const isSyncingRef = useRef(false)
   const toast = useToast()
 
-  // Sincronizar con Binance en segundo plano (actualiza la BD desde la API)
-  const runBackgroundSync = async () => {
-    if (isSyncingRef.current) return
-    try {
-      const res = await axios.post('/api/binance/sync')
-      if (res.data?.success && (res.data.newTransactions > 0 || res.data.updatedTransactions > 0)) {
-        window.dispatchEvent(new CustomEvent('binance-sync-completed'))
-        setTimeout(() => loadMetrics(true), 800)
-      }
-    } catch {
-      // Silencioso: no molestar al usuario si falla la sync en segundo plano
-    }
-  }
-
   useEffect(() => {
     loadMetrics(true)
-    const interval = setInterval(() => loadMetrics(false), 5000)
-    // Sincronizar con Binance cada 2 min para que la BD (y las compras hoy) se actualicen desde la API
-    const syncInterval = setInterval(runBackgroundSync, 2 * 60 * 1000)
+    const interval = setInterval(() => loadMetrics(false), UI_POLL_DATABASE_MS)
     const handleSync = () => {
       setTimeout(() => loadMetrics(true), 1000)
     }
     window.addEventListener('binance-sync-completed', handleSync)
     return () => {
       clearInterval(interval)
-      clearInterval(syncInterval)
       window.removeEventListener('binance-sync-completed', handleSync)
     }
   }, [])
@@ -160,24 +145,31 @@ export default function P2PDashboard() {
     setIsSyncing(true)
     isSyncingRef.current = true
     try {
-      const response = await axios.post('/api/binance/sync')
-      if (response.data.success) {
-        toast({
-          title: 'Sincronización completada',
-          description: `${response.data.newTransactions || 0} nuevas transacciones sincronizadas`,
-          status: 'success',
-          duration: 3000,
-          isClosable: true,
-        })
-        // Disparar evento para actualizar otros componentes
-        window.dispatchEvent(new CustomEvent('binance-sync-completed'))
-        // Recargar métricas con refresh para que se actualicen las compras/ventas de hoy
-        setTimeout(() => { loadMetrics(true) }, 800)
+      const response = await requestBinanceSync({ force: true })
+      if (response.success) {
+        if (response.skipped) {
+          toast({
+            title: 'Datos al día',
+            description: 'La última sincronización con Binance fue hace poco.',
+            status: 'info',
+            duration: 2500,
+            isClosable: true,
+          })
+        } else {
+          toast({
+            title: 'Sincronización completada',
+            description: `${response.newTransactions || 0} nuevas transacciones sincronizadas`,
+            status: 'success',
+            duration: 3000,
+            isClosable: true,
+          })
+        }
+        setTimeout(() => loadMetrics(true), 800)
       }
-    } catch (error: any) {
+    } catch {
       toast({
         title: 'Error de sincronización',
-        description: error.response?.data?.error || 'No se pudo sincronizar las transacciones',
+        description: 'No se pudo sincronizar las transacciones',
         status: 'error',
         duration: 5000,
         isClosable: true,

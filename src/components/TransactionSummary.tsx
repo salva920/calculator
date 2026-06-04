@@ -14,6 +14,7 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import axios from 'axios'
+import { UI_POLL_DATABASE_MS } from '@/lib/sync-constants'
 
 interface TransactionSummaryMetrics {
   totalTransactions: number
@@ -33,8 +34,8 @@ export default function TransactionSummary() {
   useEffect(() => {
     loadMetrics()
     
-    // Actualizar cada 5 segundos para tiempo real
-    const interval = setInterval(loadMetrics, 5000)
+    // Poll solo MongoDB (no Binance)
+    const interval = setInterval(loadMetrics, UI_POLL_DATABASE_MS)
     
     // Escuchar eventos de sincronización
     const handleSync = () => {

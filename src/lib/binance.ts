@@ -387,13 +387,6 @@ export class BinanceAPI {
       // Construir URL completa con query string y signature
       const url = `https://api.binance.com/api/v3/account?${queryString}&signature=${signature}`
 
-      // Debug: Mostrar información útil (sin exponer el secret completo)
-      console.log('Verificando credenciales Binance:')
-      console.log('- API Key:', this.apiKey.substring(0, 10) + '...' + this.apiKey.substring(this.apiKey.length - 5))
-      console.log('- Secret length:', this.apiSecret.length)
-      console.log('- Timestamp:', timestamp)
-      console.log('- Signature:', signature.substring(0, 20) + '...')
-
       // Hacer la petición
       const response = await axios.get(url, {
         headers: {
@@ -402,31 +395,12 @@ export class BinanceAPI {
         timeout: BINANCE_HTTP_TIMEOUT_MS,
       })
 
-      console.log('✓ Credenciales verificadas correctamente')
       return response.status === 200
     } catch (error: any) {
-      // Si el error es de firma, puede ser un problema de sincronización de tiempo o credenciales incorrectas
-      if (error.response?.data?.code === -1022) {
-        console.error('❌ Error de firma (-1022). Posibles causas:')
-        console.error('1. API Key o Secret incorrectos o con espacios adicionales')
-        console.error('2. El tiempo del servidor no está sincronizado')
-        console.error('3. La API Key no tiene permisos de lectura')
-        console.error('4. La API Key está restringida por IP y tu IP no está permitida')
-        console.error('5. La API Key fue revocada o expiró')
-        console.error('')
-        console.error('💡 Solución recomendada:')
-        console.error('   - Ve a Binance → API Management')
-        console.error('   - Verifica que tu API Key esté activa y tenga "Enable Reading"')
-        console.error('   - Verifica que no haya restricciones de IP')
-        console.error('   - Si las credenciales fueron compartidas públicamente, crea una nueva API Key')
-      } else if (error.response?.data?.code === -2015) {
-        console.error('❌ Error -2015: IP no permitida')
-        console.error('   Tu IP no está en la lista de IPs permitidas de la API Key')
-      } else if (error.response?.data?.code === -2010) {
-        console.error('❌ Error -2010: Permisos insuficientes')
-        console.error('   La API Key no tiene permisos de lectura')
+      const code = error.response?.data?.code
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[Binance] verifyCredentials failed:', code ?? error.message)
       }
-      console.error('Error completo:', error.response?.data || error.message)
       return false
     }
   }

@@ -38,6 +38,7 @@ import {
 } from '@chakra-ui/react'
 import { FaShoppingCart, FaArrowDown, FaArrowUp } from 'react-icons/fa'
 import axios from 'axios'
+import { UI_POLL_DATABASE_MS } from '@/lib/sync-constants'
 
 interface AdStats {
   advNo: string
@@ -88,8 +89,8 @@ export default function AdsPerformance() {
   useEffect(() => {
     loadAds()
     
-    // Actualizar cada 5 segundos
-    const interval = setInterval(loadAds, 5000)
+    // Poll solo MongoDB (no Binance)
+    const interval = setInterval(loadAds, UI_POLL_DATABASE_MS)
     
     // Escuchar eventos de sincronización
     const handleSync = () => {

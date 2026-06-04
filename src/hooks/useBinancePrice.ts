@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
+import { BINANCE_PRICE_REFETCH_MS } from '@/lib/sync-constants'
 
 interface BinancePriceResponse {
   symbol: string
@@ -30,9 +31,9 @@ export function useBinancePrice() {
         throw new Error('No se pudo obtener el precio de Binance')
       }
     },
-    refetchInterval: 30000, // Refrescar cada 30 segundos
-    staleTime: 10000, // Considerar datos obsoletos después de 10 segundos
-    retry: 3,
+    refetchInterval: BINANCE_PRICE_REFETCH_MS,
+    staleTime: 30_000,
+    retry: 2,
     retryDelay: 1000,
   })
 }

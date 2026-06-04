@@ -10,6 +10,7 @@ import { calculateBankCommission, getPaymentCommission } from '@/lib/payment-com
 import { processAndSaveCycles } from '@/utils/cycle-processor'
 import { getTodayBoundsCaracas, parseDayBoundsCaracas } from '@/utils/caracas-date'
 import { invalidateMetricsCache } from '@/lib/metrics-cache'
+import { BINANCE_SYNC_SERVER_MIN_GAP_MS } from '@/lib/sync-constants'
 import { Prisma } from '@prisma/client'
 
 const DEFAULT_BACKFILL_DAYS = 7
@@ -70,11 +71,13 @@ function resolveCompletedAt(
 export async function POST(request: NextRequest) {
   try {
     let backfillFromYmd: string | null = null
+    let forceSync = request.headers.get('x-force-sync') === '1'
     try {
       const body = await request.json()
       if (body?.backfillFrom && /^\d{4}-\d{2}-\d{2}$/.test(String(body.backfillFrom))) {
         backfillFromYmd = String(body.backfillFrom)
       }
+      if (body?.force === true) forceSync = true
     } catch {
       // POST sin body (sync automático)
     }
@@ -119,6 +122,19 @@ export async function POST(request: NextRequest) {
         },
         { status: 400 }
       )
+    }
+
+    if (!forceSync && !backfillFromYmd && credentials.lastSync) {
+      const elapsed = Date.now() - new Date(credentials.lastSync).getTime()
+      if (elapsed < BINANCE_SYNC_SERVER_MIN_GAP_MS) {
+        return NextResponse.json({
+          success: true,
+          skipped: true,
+          message: 'Sync omitida: intervalo mínimo',
+          newTransactions: 0,
+          updatedTransactions: 0,
+        })
+      }
     }
 
     const binanceAPI = new BinanceAPI(apiKey, apiSecret)

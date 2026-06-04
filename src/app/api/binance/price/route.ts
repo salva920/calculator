@@ -1,3 +1,4 @@
+export { dynamic } from '@/lib/route-config'
 import { NextRequest, NextResponse } from 'next/server'
 import axios from 'axios'
 
@@ -32,8 +33,7 @@ export async function GET(request: NextRequest) {
         adjustmentFactor = 0.99 // Reducir 1%
       }
       
-    } catch (binanceError) {
-      console.log('Binance API not available, using base rate')
+    } catch {
       adjustmentFactor = 1.0
     }
     

@@ -1,3 +1,4 @@
+export { dynamic } from '@/lib/route-config'
 import { NextRequest, NextResponse } from 'next/server'
 import axios from 'axios'
 
@@ -22,8 +23,7 @@ export async function GET(request: NextRequest) {
       timestamp: Date.now()
     })
     
-  } catch (error) {
-    console.error('Error fetching USD/VES rate:', error)
+  } catch {
     
     // Fallback a una tasa simulada
     const fallbackRate = 36.5
