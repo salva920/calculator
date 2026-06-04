@@ -1,5 +1,8 @@
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { isBuildTimeDynamicError } from '@/lib/api-route'
 import {
   buildTransactionWindowWhere,
   getPeriodBoundsCaracas,
@@ -93,13 +96,15 @@ export async function GET(request: NextRequest) {
       transactions,
       count: transactions.length,
     })
-  } catch (error: any) {
-    console.error('Error obteniendo transacciones P2P:', error)
+  } catch (error: unknown) {
+    if (!isBuildTimeDynamicError(error)) {
+      console.error('Error obteniendo transacciones P2P:', error)
+    }
     return NextResponse.json(
       {
         success: false,
         error: 'Error al obtener transacciones',
-        details: error.message,
+        details: error instanceof Error ? error.message : 'Error desconocido',
       },
       { status: 500 }
     )

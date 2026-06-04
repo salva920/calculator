@@ -1,5 +1,8 @@
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { isBuildTimeDynamicError } from '@/lib/api-route'
 
 export async function GET(request: NextRequest) {
   try {
@@ -142,13 +145,15 @@ export async function GET(request: NextRequest) {
       }
     })
 
-  } catch (error: any) {
-    console.error('Error fetching balance:', error)
+  } catch (error: unknown) {
+    if (!isBuildTimeDynamicError(error)) {
+      console.error('Error fetching balance:', error)
+    }
     return NextResponse.json(
       { 
         success: false, 
         error: 'Error al obtener el balance',
-        details: error.message 
+        details: error instanceof Error ? error.message : 'Error desconocido'
       },
       { status: 500 }
     )

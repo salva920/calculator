@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { processAndSaveCycles } from '@/utils/cycle-processor'
@@ -7,6 +9,7 @@ import {
   METRICS_CACHE_TTL_MS,
   setMetricsCacheEntry,
 } from '@/lib/metrics-cache'
+import { isBuildTimeDynamicError } from '@/lib/api-route'
 
 const MIN_CYCLE_USDT = 0.01 // mínimo para considerar un ciclo (evitar polvo)
 const prismaAny = prisma as any
@@ -557,13 +560,15 @@ export async function GET(request: NextRequest) {
       success: true,
       metrics,
     })
-  } catch (error: any) {
-    console.error('Error calculando métricas:', error)
+  } catch (error: unknown) {
+    if (!isBuildTimeDynamicError(error)) {
+      console.error('Error calculando métricas:', error)
+    }
     return NextResponse.json(
       {
         success: false,
         error: 'Error al calcular métricas',
-        details: error.message,
+        details: error instanceof Error ? error.message : 'Error desconocido',
       },
       { status: 500 }
     )

@@ -1,5 +1,8 @@
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { isBuildTimeDynamicError } from '@/lib/api-route'
 
 // Obtener estadísticas de anuncios (agrupadas por advNo)
 export async function GET(request: NextRequest) {
@@ -213,13 +216,15 @@ export async function GET(request: NextRequest) {
       ads,
       count: ads.length,
     })
-  } catch (error: any) {
-    console.error('Error obteniendo estadísticas de anuncios:', error)
+  } catch (error: unknown) {
+    if (!isBuildTimeDynamicError(error)) {
+      console.error('Error obteniendo estadísticas de anuncios:', error)
+    }
     return NextResponse.json(
       {
         success: false,
         error: 'Error al obtener estadísticas de anuncios',
-        details: error.message,
+        details: error instanceof Error ? error.message : 'Error desconocido',
       },
       { status: 500 }
     )
