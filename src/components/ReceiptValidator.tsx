@@ -334,9 +334,10 @@ export default function ReceiptValidator({
                   <Box
                     key={validation.id}
                     p={2}
-                    bg="gray.50"
-                    borderRadius="md"
-                    border="1px solid"
+                    bg="surface.muted"
+                    borderRadius="xl"
+                    borderWidth="1px"
+                    borderColor="surface.border"
                     borderColor="gray.200"
                   >
                     <HStack justify="space-between">
