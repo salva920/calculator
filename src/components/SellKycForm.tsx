@@ -17,9 +17,7 @@ import {
 } from '@chakra-ui/react'
 import { FaSave, FaUpload } from 'react-icons/fa'
 import axios from 'axios'
-import { isInlineImageRef, isLegacyFilesystemImageRef } from '@/lib/store-upload-image'
-import { kycHasLegacyImages } from '@/lib/kyc-image-utils'
-import { migrateKycRecordFromBrowser } from '@/lib/migrate-kyc-client'
+import { isInlineImageRef } from '@/lib/store-upload-image'
 
 interface SellKycFormProps {
   transactionId: string
@@ -78,36 +76,6 @@ export default function SellKycForm({ transactionId, orderNumber }: SellKycFormP
 
       if (response.data.success && response.data.kyc) {
         const kyc: SellKycResponse = response.data.kyc
-        if (kycHasLegacyImages(kyc)) {
-          const result = await migrateKycRecordFromBrowser({
-            transactionId,
-            idCardImageUrl: kyc.idCardImageUrl,
-            swornDeclarationImageUrl: kyc.swornDeclarationImageUrl,
-            sourceOfFundsImageUrl: kyc.sourceOfFundsImageUrl,
-          })
-          if (result.migrated > 0) {
-            const again = await axios.get('/api/transactions/sell-kyc', {
-              params: { transactionId },
-            })
-            if (again.data.success && again.data.kyc) {
-              const updated: SellKycResponse = again.data.kyc
-              setExistingKyc(updated)
-              setBankName(updated.bankName || '')
-              setAccountNumber(updated.accountNumber || '')
-              setFullName(updated.fullName || '')
-              setIdNumber(updated.idNumber || '')
-              window.dispatchEvent(new CustomEvent('kyc-migrated'))
-              toast({
-                title: 'Imágenes migradas',
-                description: `${result.migrated} foto(s) vinculadas a esta orden.`,
-                status: 'success',
-                duration: 3000,
-                isClosable: true,
-              })
-              return
-            }
-          }
-        }
         setExistingKyc(kyc)
         setBankName(kyc.bankName || '')
         setAccountNumber(kyc.accountNumber || '')
@@ -263,13 +231,9 @@ export default function SellKycForm({ transactionId, orderNumber }: SellKycFormP
             />
           </Box>
         )}
-        {!previews[field] && isLegacyFilesystemImageRef(existingUrl) && (
-          <Text fontSize="xs" color="orange.600" maxW="220px">
-            Archivo solo en tu PC. Usa &quot;Migrar todas&quot; arriba en transacciones, abre la app en localhost, o{' '}
-            <Text as="span" fontWeight="semibold">
-              npm run migrate:kyc
-            </Text>{' '}
-            en tu proyecto.
+        {!previews[field] && existingUrl && !isInlineImageRef(existingUrl) && (
+          <Text fontSize="xs" color="orange.600" maxW="200px">
+            Imagen no disponible. Sube el archivo de nuevo.
           </Text>
         )}
       </HStack>

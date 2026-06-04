@@ -1,17 +1,11 @@
 const MAX_IMAGE_BYTES = 1_500_000 // ~1.5 MB por imagen (límite documento MongoDB)
 
-export { MAX_IMAGE_BYTES }
-
-export function guessMimeFromFilename(filename: string): string {
+function guessMime(filename: string): string {
   const ext = filename.split('.').pop()?.toLowerCase()
   if (ext === 'png') return 'image/png'
   if (ext === 'webp') return 'image/webp'
   if (ext === 'gif') return 'image/gif'
   return 'image/jpeg'
-}
-
-function guessMime(filename: string): string {
-  return guessMimeFromFilename(filename)
 }
 
 /** Guarda la imagen como data URL en MongoDB (compatible con Vercel serverless). */
@@ -27,15 +21,6 @@ export async function fileToDataUrl(file: File): Promise<string> {
   return `data:${mime};base64,${base64}`
 }
 
-export function bufferToDataUrl(buffer: Buffer, mime: string): string {
-  return `data:${mime};base64,${buffer.toString('base64')}`
-}
-
 export function isInlineImageRef(ref: string | null | undefined): boolean {
   return !!ref && ref.startsWith('data:')
-}
-
-/** Rutas /uploads/... solo existían en disco local; no en Vercel. */
-export function isLegacyFilesystemImageRef(ref: string | null | undefined): boolean {
-  return !!ref && (ref.startsWith('/uploads/') || ref.startsWith('uploads/'))
 }

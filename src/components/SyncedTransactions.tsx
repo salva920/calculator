@@ -38,7 +38,6 @@ import { FaAddressCard, FaCheckCircle } from 'react-icons/fa'
 import axios from 'axios'
 import ReceiptValidator from './ReceiptValidator'
 import SellKycForm from './SellKycForm'
-import KycLegacyMigrateBanner from './KycLegacyMigrateBanner'
 
 type DateFilter = 'today' | 'yesterday' | 'week' | 'month' | 'threeMonths' | 'all'
 
@@ -379,9 +378,6 @@ export default function SyncedTransactions() {
         </VStack>
       </CardHeader>
       <CardBody pt={0} overflow="hidden">
-        <Box px={{ base: 2, md: 4 }} pt={3}>
-          <KycLegacyMigrateBanner />
-        </Box>
         {showDaySummary && !isLoading && (
           <Box
             mb={4}
