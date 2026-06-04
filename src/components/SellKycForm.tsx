@@ -17,6 +17,7 @@ import {
 } from '@chakra-ui/react'
 import { FaSave, FaUpload } from 'react-icons/fa'
 import axios from 'axios'
+import { isInlineImageRef, isLegacyFilesystemImageRef } from '@/lib/store-upload-image'
 
 interface SellKycFormProps {
   transactionId: string
@@ -214,7 +215,7 @@ export default function SellKycForm({ transactionId, orderNumber }: SellKycFormP
             />
           </Box>
         )}
-        {!previews[field] && existingUrl && (
+        {!previews[field] && existingUrl && isInlineImageRef(existingUrl) && (
           <Box>
             <Text fontSize="xs" color="gray.600" mb={1}>
               Imagen actual
@@ -229,6 +230,11 @@ export default function SellKycForm({ transactionId, orderNumber }: SellKycFormP
               borderColor="gray.200"
             />
           </Box>
+        )}
+        {!previews[field] && isLegacyFilesystemImageRef(existingUrl) && (
+          <Text fontSize="xs" color="orange.600" maxW="200px">
+            Imagen guardada solo en tu PC. Vuelve a subirla para verla en la app web.
+          </Text>
         )}
       </HStack>
     </FormControl>

@@ -1,14 +1,10 @@
+export { dynamic } from '@/lib/route-config'
+export const maxDuration = 30
+
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { extractAmountFromImage } from '@/lib/receipt-ocr'
-import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
-import { existsSync } from 'fs'
-
-// Nota: Para OCR en producción, considera usar un servicio como:
-// - Google Cloud Vision API
-// - AWS Textract
-// - Tesseract.js (más pesado pero gratuito)
+import { fileToDataUrl } from '@/lib/store-upload-image'
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,24 +37,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Guardar la imagen
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
-
-    // Crear directorio si no existe
-    const uploadsDir = join(process.cwd(), 'public', 'uploads', 'receipts')
-    if (!existsSync(uploadsDir)) {
-      await mkdir(uploadsDir, { recursive: true })
-    }
-
-    // Generar nombre único para el archivo
-    const timestamp = Date.now()
-    const filename = `${transactionId}-${timestamp}.${file.name.split('.').pop()}`
-    const filepath = join(uploadsDir, filename)
-    const imageUrl = `/uploads/receipts/${filename}`
-
-    // Guardar archivo
-    await writeFile(filepath, buffer)
+    const imageUrl = await fileToDataUrl(file)
 
     // Extraer monto de la imagen usando OCR
     // Por ahora, usaremos una aproximación simple

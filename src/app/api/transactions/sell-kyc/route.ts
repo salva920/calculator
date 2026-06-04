@@ -1,26 +1,9 @@
+export { dynamic } from '@/lib/route-config'
+export const maxDuration = 30
+
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
-import { existsSync } from 'fs'
-
-async function saveImage(file: File, transactionId: string, suffix: string): Promise<string> {
-  const bytes = await file.arrayBuffer()
-  const buffer = Buffer.from(bytes)
-  const uploadsDir = join(process.cwd(), 'public', 'uploads', 'sell-kyc')
-
-  if (!existsSync(uploadsDir)) {
-    await mkdir(uploadsDir, { recursive: true })
-  }
-
-  const extension = file.name.split('.').pop() || 'jpg'
-  const timestamp = Date.now()
-  const filename = `${transactionId}-${suffix}-${timestamp}.${extension}`
-  const filepath = join(uploadsDir, filename)
-
-  await writeFile(filepath, buffer)
-  return `/uploads/sell-kyc/${filename}`
-}
+import { fileToDataUrl } from '@/lib/store-upload-image'
 
 export async function POST(request: NextRequest) {
   try {
@@ -73,14 +56,12 @@ export async function POST(request: NextRequest) {
       where: { transactionId },
     })
 
-    const idCardImageUrl = idCardImage
-      ? await saveImage(idCardImage, transactionId, 'cedula')
-      : undefined
+    const idCardImageUrl = idCardImage ? await fileToDataUrl(idCardImage) : undefined
     const swornDeclarationImageUrl = swornDeclarationImage
-      ? await saveImage(swornDeclarationImage, transactionId, 'declaracion-jurada')
+      ? await fileToDataUrl(swornDeclarationImage)
       : undefined
     const sourceOfFundsImageUrl = sourceOfFundsImage
-      ? await saveImage(sourceOfFundsImage, transactionId, 'origen-fondos')
+      ? await fileToDataUrl(sourceOfFundsImage)
       : undefined
 
     const createData: Record<string, unknown> = {

@@ -1,3 +1,6 @@
+export { dynamic } from '@/lib/route-config'
+export const maxDuration = 60
+
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { decrypt } from '@/lib/crypto'
@@ -101,9 +104,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Desencriptar credenciales
-    const apiKey = decrypt(credentials.apiKey)
-    const apiSecret = decrypt(credentials.apiSecret)
+    let apiKey: string
+    let apiSecret: string
+    try {
+      apiKey = decrypt(credentials.apiKey)
+      apiSecret = decrypt(credentials.apiSecret)
+    } catch {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'No se pudieron leer las credenciales de Binance. Verifica que ENCRYPTION_KEY en Vercel sea la misma con la que se guardaron.',
+        },
+        { status: 500 }
+      )
+    }
 
     const binanceAPI = new BinanceAPI(apiKey, apiSecret)
 
@@ -329,9 +344,11 @@ export async function POST(request: NextRequest) {
       syncedCount++
     }
 
-    // Procesar ciclos de compra-venta para calcular ganancias (función antigua, mantener por compatibilidad)
-    await processP2PCycles()
-    
+    // Procesar ciclos en segundo plano (evita timeout en Vercel)
+    processP2PCycles().catch((err) =>
+      console.error('Error procesando ciclos P2P legacy después de sync:', err)
+    )
+
     // Procesar y guardar ciclos detallados (nueva función optimizada)
     // Ejecutar en background para no bloquear la respuesta de sync
     const cycleWindowStart = new Date()
