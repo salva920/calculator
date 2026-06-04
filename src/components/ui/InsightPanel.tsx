@@ -9,6 +9,7 @@ const accents = {
   red: { bg: 'red.50', border: 'red.200', accent: 'red.500' },
   orange: { bg: 'orange.50', border: 'orange.200', accent: 'orange.500' },
   purple: { bg: 'purple.50', border: 'purple.200', accent: 'purple.500' },
+  blue: { bg: 'blue.50', border: 'blue.200', accent: 'blue.500' },
   neutral: { bg: 'surface.muted', border: 'surface.border', accent: 'gray.400' },
 } as const
 

@@ -659,11 +659,11 @@ export default function P2PDashboard() {
 
           {/* Información de Brecha Actual (siempre visible si hay datos) */}
           {!metrics.isGapTooSmall && metrics.latestBuyPrice > 0 && metrics.latestSellPrice > 0 && (
-            <Box p={{ base: 2, md: 3 }} bg="blue.50" borderRadius="md" border="1px solid" borderColor="blue.200">
+            <InsightPanel accent="blue" p={{ base: 2, md: 3 }}>
               <VStack align="start" spacing={2}>
                 <HStack justify="space-between" w="full" flexWrap="wrap">
                   <Text fontSize={{ base: 'xs', md: 'sm' }} fontWeight="bold" color="blue.700">
-                    📊 Brecha Actual de Tasas
+                    Brecha actual de tasas
                   </Text>
                   {metrics.buyPriceTrend === 'increasing' && (
                     <Badge colorScheme="orange" fontSize="10px">Tasa Subiendo ↗️</Badge>
@@ -699,7 +699,7 @@ export default function P2PDashboard() {
                   </VStack>
                 </SimpleGrid>
                 {metrics.todayCyclesSummary && (metrics.todayCyclesVolumeUsdt ?? 0) > 0 && (
-                  <Box w="full" pt={2} borderTopWidth="1px" borderColor="blue.200">
+                  <Box w="full" pt={2} borderTopWidth="1px" borderColor="surface.border">
                     <Text fontSize="10px" color="gray.600" mb={1}>
                       Ganancia real vs estimada (ciclos de hoy)
                     </Text>
@@ -729,7 +729,7 @@ export default function P2PDashboard() {
                   </Box>
                 )}
               </VStack>
-            </Box>
+            </InsightPanel>
           )}
         </VStack>
       </CardBody>
