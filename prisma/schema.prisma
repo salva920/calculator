@@ -1,0 +1,237 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model DailyTransaction {
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  date                DateTime @db.Date
+  usdtAmount          Float
+  buyPrice            Float
+  sellPrice           Float
+  buyPriceType        String // 'fixed' | 'variable'
+  sellPriceType       String // 'fixed' | 'variable'
+  buyPriceMargin      Float?
+  sellPriceMargin     Float?
+  bankCommission      Float
+  bankCommissionType  String // 'percentage' | 'fixed'
+  binanceCommission   Float
+  grossProfit         Float
+  netProfit           Float
+  totalCosts          Float
+  profitMargin        Float
+  roi                 Float
+  cyclesPerDay        Int
+  workingDaysPerMonth Int
+  currentOrders       Int
+  targetOrders        Int
+  currentBtc30Days    Float
+  targetBtc30Days     Float
+  currentBtcTotal     Float
+  targetBtcTotal      Float
+  source              String   @default("manual") // 'manual' | 'binance_sync'
+  binanceOrderId      String? // ID de la orden de Binance si viene de sincronización
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("daily_transactions")
+}
+
+model DailyBalance {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  date              DateTime @unique @db.Date
+  totalTransactions Int      @default(0)
+  totalUsdtAmount   Float    @default(0)
+  totalGrossProfit  Float    @default(0)
+  totalNetProfit    Float    @default(0)
+  totalCosts        Float    @default(0)
+  averageROI        Float    @default(0)
+  bestTransaction   Float    @default(0)
+  worstTransaction  Float    @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("daily_balances")
+}
+
+model MonthlySummary {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  year              Int
+  month             Int
+  totalTransactions Int      @default(0)
+  totalUsdtAmount   Float    @default(0)
+  totalGrossProfit  Float    @default(0)
+  totalNetProfit    Float    @default(0)
+  totalCosts        Float    @default(0)
+  averageROI        Float    @default(0)
+  bestDay           Float    @default(0)
+  worstDay          Float    @default(0)
+  workingDays       Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([year, month])
+  @@map("monthly_summaries")
+}
+
+model BinanceCredentials {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  apiKey       String // Encriptado en el servidor
+  apiSecret    String // Encriptado en el servidor
+  isActive     Boolean   @default(true)
+  lastSync     DateTime?
+  syncEnabled  Boolean   @default(true)
+  syncInterval Int       @default(300000) // 5 minutos en milisegundos
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("binance_credentials")
+}
+
+model BinanceP2PTransaction {
+  id                 String              @id @default(auto()) @map("_id") @db.ObjectId
+  binanceOrderId     String              @unique // ID de la orden en Binance
+  orderNumber        String // Número de orden
+  advNo              String? // Advertisement number
+  tradeType          String // 'BUY' | 'SELL'
+  asset              String // 'USDT'
+  fiat               String // 'VES'
+  fiatAmount         Float // Cantidad en VES
+  amount             Float // Cantidad en USDT
+  totalPrice         Float // Precio total
+  unitPrice          Float // Precio unitario (VES por USDT)
+  orderStatus        String // Estado de la orden
+  createTime         DateTime // Fecha de creación en Binance
+  /// Momento de cierre COMPLETED (Binance o sync). Métricas "hoy" en UTC por cierre.
+  completedAt        DateTime?
+  commission         Float               @default(0) // Comisión de Binance
+  counterPartName    String? // Nombre del contraparte
+  paymentMethod      String? // Método de pago
+  bankCommission     Float               @default(0) // Comisión bancaria estimada
+  bankCommissionType String              @default("percentage") // 'percentage' | 'fixed'
+  grossProfit        Float? // Calculado si es parte de un ciclo
+  netProfit          Float? // Calculado si es parte de un ciclo
+  isSynced           Boolean             @default(false) // Si ya fue procesado
+  syncedAt           DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  receiptValidations ReceiptValidation[] // Validaciones de comprobantes
+  sellKyc            SellTransactionKyc?
+
+  @@map("binance_p2p_transactions")
+}
+
+model ReceiptValidation {
+  id              String                @id @default(auto()) @map("_id") @db.ObjectId
+  transactionId   String                @db.ObjectId
+  transaction     BinanceP2PTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  imageUrl        String // URL de la imagen del comprobante
+  extractedAmount Float? // Monto extraído de la imagen con OCR
+  expectedAmount  Float // Monto esperado de la orden
+  isValid         Boolean               @default(false) // Si el monto coincide
+  confidence      Float? // Confianza del OCR (0-1)
+  ocrText         String? // Texto completo extraído por OCR
+  validatedAt     DateTime              @default(now())
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  @@map("receipt_validations")
+}
+
+model SellTransactionKyc {
+  id                         String                @id @default(auto()) @map("_id") @db.ObjectId
+  transactionId              String                @unique @db.ObjectId
+  transaction                BinanceP2PTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  bankName                   String? // Nombre del banco registrado en KYC
+  accountNumber              String? // Número de cuenta
+  fullName                   String? // Nombre del titular
+  idNumber                   String? // Cédula
+  idCardImageUrl             String? // Imagen de cédula
+  swornDeclarationImageUrl   String? // Declaración jurada (imagen)
+  sourceOfFundsImageUrl      String? // Origen de fondos (imagen)
+  createdAt                  DateTime              @default(now())
+  updatedAt                  DateTime              @updatedAt
+
+  @@map("sell_transaction_kyc")
+}
+
+model Goal {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  name         String // Nombre del objetivo
+  type         String // 'orders' | 'btc_30_days' | 'btc_total' | 'profit' | 'volume'
+  targetValue  Float // Valor objetivo
+  currentValue Float     @default(0) // Valor actual
+  startDate    DateTime  @default(now())
+  endDate      DateTime? // Fecha límite (opcional)
+  isActive     Boolean   @default(true)
+  isCompleted  Boolean   @default(false)
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("goals")
+}
+
+model P2PCycle {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  completedAt      DateTime // Fecha y hora cuando se completó el ciclo
+  date             DateTime @db.Date // Fecha del día (para agrupar por día)
+  usdtAmount       Float // Cantidad de USDT del ciclo (ej. 100)
+  sellUsdtAmount   Float // USDT vendidos en este ciclo
+  buyUsdtAmount    Float // USDT comprados en este ciclo
+  sellFiatAmount   Float // Total en Bs.S de las ventas
+  buyFiatAmount    Float // Total en Bs.S de las compras
+  averageSellPrice Float // Precio promedio de venta (Bs.S por USDT)
+  averageBuyPrice  Float // Precio promedio de compra (Bs.S por USDT)
+  grossProfit      Float // Ganancia bruta (Bs.S)
+  netProfit        Float // Ganancia neta (Bs.S)
+  totalCommissions Float // Total de comisiones (Binance + bancos)
+  profitMargin     Float // Margen de ganancia (%)
+  roi              Float // ROI (%)
+  sellTransactions String[] // IDs de las transacciones de venta que formaron este ciclo
+  buyTransactions  String[] // IDs de las transacciones de compra que formaron este ciclo
+  paymentMethods   String[] // Métodos de pago/bancos usados (ej. ["Banesco", "Mercantil"])
+  sellBanks        String[] // Bancos usados en ventas
+  buyBanks         String[] // Bancos usados en compras
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([date])
+  @@index([completedAt])
+  @@map("p2p_cycles")
+}
+
+model ManualBalanceAdjustment {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  type      String // 'BUY_EXTERNAL' | 'SELL_EXTERNAL' | 'SETTLEMENT'
+  usdtAmount Float
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdAt])
+  @@map("manual_balance_adjustments")
+}
+
+/// Socio de capital prestado para operar P2P (capital en USDT; reparto en USDT)
+model CapitalPartner {
+  id                   String   @id @default(auto()) @map("_id") @db.ObjectId
+  name                 String
+  investedUsdt         Float // Capital aportado en USDT
+  agreedDailyPercent   Float    @default(1) // % diario acordado (ej. 1 = 1%)
+  entryDate            DateTime? // Fecha de ingreso (Caracas); si falta, se usa createdAt
+  sortOrder            Int      @default(0)
+  isActive             Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([isActive])
+  @@map("capital_partners")
+}

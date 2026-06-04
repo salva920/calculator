@@ -1,0 +1,48 @@
+{
+  "name": "binance-p2p-calculator",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Calculadora de ganancias para transacciones P2P de Binance USDT/VES",
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:push": "prisma db push",
+    "db:generate": "prisma generate",
+    "check-compras-hoy": "node scripts/check-compras-hoy.js",
+    "check-binance-bank-field": "node scripts/check-binance-bank-field.js"
+  },
+  "dependencies": {
+    "@chakra-ui/react": "^2.8.2",
+    "@chakra-ui/theme-tools": "^2.2.9",
+    "@emotion/react": "^11.11.1",
+    "@emotion/styled": "^11.11.0",
+    "@popperjs/core": "^2.11.8",
+    "@prisma/client": "^5.7.1",
+    "@tanstack/react-query": "^5.14.2",
+    "axios": "^1.6.2",
+    "framer-motion": "^10.16.16",
+    "framesync": "^6.1.2",
+    "next": "14.0.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-icons": "^4.12.0",
+    "react-is": "^18.3.1",
+    "recharts": "^2.8.0",
+    "tesseract.js": "^5.1.1",
+    "tslib": "^2.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "eslint": "^8.56.0",
+    "eslint-config-next": "14.0.4",
+    "prisma": "^5.7.1",
+    "typescript": "^5.3.3"
+  },
+  "optionalDependencies": {
+    "@next/swc-win32-x64-msvc": "^14.0.4"
+  }
+}
