@@ -1,11 +1,17 @@
 const MAX_IMAGE_BYTES = 1_500_000 // ~1.5 MB por imagen (límite documento MongoDB)
 
-function guessMime(filename: string): string {
+export { MAX_IMAGE_BYTES }
+
+export function guessMimeFromFilename(filename: string): string {
   const ext = filename.split('.').pop()?.toLowerCase()
   if (ext === 'png') return 'image/png'
   if (ext === 'webp') return 'image/webp'
   if (ext === 'gif') return 'image/gif'
   return 'image/jpeg'
+}
+
+function guessMime(filename: string): string {
+  return guessMimeFromFilename(filename)
 }
 
 /** Guarda la imagen como data URL en MongoDB (compatible con Vercel serverless). */
@@ -19,6 +25,10 @@ export async function fileToDataUrl(file: File): Promise<string> {
   const mime = file.type || guessMime(file.name)
   const base64 = Buffer.from(bytes).toString('base64')
   return `data:${mime};base64,${base64}`
+}
+
+export function bufferToDataUrl(buffer: Buffer, mime: string): string {
+  return `data:${mime};base64,${buffer.toString('base64')}`
 }
 
 export function isInlineImageRef(ref: string | null | undefined): boolean {
