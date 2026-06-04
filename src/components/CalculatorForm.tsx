@@ -193,8 +193,13 @@ export default function CalculatorForm({ onResultsChange, onFormDataChange }: Ca
       transition={{ duration: 0.5 }}
     >
       <Card>
-        <CardHeader>
-          <Heading size="md">Calculadora P2P Binance</Heading>
+        <CardHeader borderBottomWidth="1px" borderColor="surface.border" bg="surface.muted">
+          <Heading size="md" color="gray.800">
+            Parámetros del ciclo
+          </Heading>
+          <Text fontSize="sm" color="gray.500" mt={1}>
+            Precios, comisiones y proyecciones
+          </Text>
           {binancePrice && (
             <VStack align="start" mt={2} spacing={2}>
               <HStack>

@@ -30,6 +30,7 @@ import {
 } from '@chakra-ui/react'
 import { FaChartLine, FaDollarSign, FaShoppingCart, FaArrowUp, FaArrowDown, FaSync } from 'react-icons/fa'
 import axios from 'axios'
+import InsightPanel from '@/components/ui/InsightPanel'
 
 interface DashboardMetrics {
   totalProfit: number
@@ -359,10 +360,10 @@ export default function P2PDashboard() {
         <VStack spacing={3} align="stretch">
 
           {/* Ordenes de HOY - Compacto */}
-          <Box p={{ base: 2, md: 3 }} bg="yellow.50" borderRadius="md" border="1px solid" borderColor="yellow.200">
+          <InsightPanel accent="brand" p={{ base: 2, md: 3 }}>
             <HStack justify="space-between" mb={2} flexWrap="wrap">
-              <Text fontSize={{ base: 'xs', md: 'sm' }} fontWeight="bold" color="yellow.700">
-                Ordenes
+              <Text fontSize={{ base: 'xs', md: 'sm' }} fontWeight="bold" color="brand.800">
+                Órdenes de hoy
               </Text>
               <Text fontSize="10px" color="gray.600">
                 {metrics.todayTransactionsCount} ({metrics.todayCompletedCount} completadas)
@@ -371,7 +372,7 @@ export default function P2PDashboard() {
 
             {/* Resumen de ganancia por ciclos hoy (sin listar cada ciclo) */}
             {metrics.todayCyclesSummary && metrics.todayCyclesSummary.cycles.length > 0 && (
-              <Box mb={3} p={2} bg="green.50" borderRadius="md" border="1px solid" borderColor="green.200">
+              <InsightPanel accent="green" mb={3} p={2}>
                 <Text fontSize={{ base: 'xs', md: 'sm' }} fontWeight="bold" color="green.700" mb={1}>
                   Ganancia por ciclos hoy
                 </Text>
@@ -383,7 +384,7 @@ export default function P2PDashboard() {
                     Total: {metrics.todayCyclesSummary.totalProfitFromCycles.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs.S
                   </Text>
                 </HStack>
-              </Box>
+              </InsightPanel>
             )}
 
             <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={2}>
@@ -413,7 +414,7 @@ export default function P2PDashboard() {
                   </Text>
                 )}
                 {(metrics.currentCycleSoldUsdt ?? 0) >= 0.01 && (
-                  <Text fontSize="10px" color="gray.500" mt={1} pt={1} borderTopWidth="1px" borderColor="yellow.200">
+                  <Text fontSize="10px" color="gray.500" mt={1} pt={1} borderTopWidth="1px" borderColor="surface.border">
                     Ciclo abierto: {(metrics.currentCycleSoldUsdt ?? 0).toFixed(2)} USDT
                     {metrics.latestSellPrice > 0 && (
                       <>
@@ -456,7 +457,7 @@ export default function P2PDashboard() {
                   </Text>
                 )}
                 {(metrics.currentCycleBoughtUsdt ?? 0) >= 0.01 && (
-                  <Text fontSize="10px" color="gray.500" mt={1} pt={1} borderTopWidth="1px" borderColor="yellow.200">
+                  <Text fontSize="10px" color="gray.500" mt={1} pt={1} borderTopWidth="1px" borderColor="surface.border">
                     Ciclo abierto: {(metrics.currentCycleBoughtUsdt ?? 0).toFixed(2)} USDT
                     {metrics.latestBuyPrice > 0 && (
                       <>
@@ -473,11 +474,11 @@ export default function P2PDashboard() {
                 )}
               </Box>
             </SimpleGrid>
-          </Box>
+          </InsightPanel>
 
           {/* Indicadores de Balance Acumulado - Compactos */}
           {metrics.pendingToBuy > 0 && (
-            <Box p={{ base: 2, md: 3 }} bg="orange.50" borderRadius="md" border="1px solid" borderColor="orange.200">
+            <InsightPanel accent="orange" p={{ base: 2, md: 3 }}>
               <HStack justify="space-between" mb={2} flexWrap="wrap">
                 <Text fontSize={{ base: 'xs', md: 'sm' }} fontWeight="bold" color="orange.700" flex="1" minW="0">
                   Desbalance acumulado
@@ -497,10 +498,10 @@ export default function P2PDashboard() {
               <Text fontSize="10px" color="gray.600" mt={1}>
                 {adjustedBuy.toFixed(2)} / {(adjustedBuy + metrics.pendingToBuy).toFixed(2)} USDT
               </Text>
-            </Box>
+            </InsightPanel>
           )}
 
-          <Box p={{ base: 2, md: 3 }} bg="gray.50" borderRadius="md" border="1px solid" borderColor="gray.200">
+          <InsightPanel accent="neutral" p={{ base: 2, md: 3 }}>
             <HStack justify="space-between" align="center">
               <Text fontSize={{ base: 'xs', md: 'sm' }} fontWeight="bold" color="gray.700">
                 Ajustes manuales (BPay / gasto / fuera de Binance)
@@ -588,10 +589,10 @@ export default function P2PDashboard() {
                 </VStack>
               )}
             </Collapse>
-          </Box>
+          </InsightPanel>
 
           {metrics.pendingToSell > 0 && (
-            <Box p={{ base: 2, md: 3 }} bg="purple.50" borderRadius="md" border="1px solid" borderColor="purple.200">
+            <InsightPanel accent="purple" p={{ base: 2, md: 3 }}>
               <HStack justify="space-between" mb={2} flexWrap="wrap">
                 <Text fontSize={{ base: 'xs', md: 'sm' }} fontWeight="bold" color="purple.700" flex="1" minW="0">
                   Desbalance acumulado
@@ -611,22 +612,22 @@ export default function P2PDashboard() {
               <Text fontSize="10px" color="gray.600" mt={1}>
                 {adjustedSell.toFixed(2)} / {(adjustedSell + metrics.pendingToSell).toFixed(2)} USDT
               </Text>
-            </Box>
+            </InsightPanel>
           )}
 
           {metrics.pendingToBuy === 0 && metrics.pendingToSell === 0 && metrics.todayBuyAmount > 0 && metrics.todaySellAmount > 0 && (
-            <Box p={{ base: 2, md: 3 }} bg="green.50" borderRadius="md" border="1px solid" borderColor="green.200">
+            <InsightPanel accent="green" p={{ base: 2, md: 3 }}>
               <HStack>
                 <Text fontSize={{ base: 'xs', md: 'sm' }} fontWeight="bold" color="green.700">
-                  ✓ Balance Equilibrado
+                  Balance equilibrado
                 </Text>
               </HStack>
-            </Box>
+            </InsightPanel>
           )}
 
           {/* Alerta de Brecha de Tasas */}
           {metrics.isGapTooSmall && metrics.latestBuyPrice > 0 && (
-            <Box p={{ base: 2, md: 3 }} bg="red.50" borderRadius="md" border="1px solid" borderColor="red.200">
+            <InsightPanel accent="red" p={{ base: 2, md: 3 }}>
               <VStack align="start" spacing={2}>
                 <HStack>
                   <Text fontSize={{ base: 'xs', md: 'sm' }} fontWeight="bold" color="red.700">
@@ -653,7 +654,7 @@ export default function P2PDashboard() {
                   </VStack>
                 </HStack>
               </VStack>
-            </Box>
+            </InsightPanel>
           )}
 
           {/* Información de Brecha Actual (siempre visible si hay datos) */}

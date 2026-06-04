@@ -1,6 +1,6 @@
 'use client'
 
-import { Box, HStack, Text, Badge, Icon, Tooltip } from '@chakra-ui/react'
+import { HStack, Text, Badge, Icon, Tooltip } from '@chakra-ui/react'
 import { FaWifi, FaInfoCircle } from 'react-icons/fa'
 
 interface PriceStatusProps {
@@ -15,10 +15,10 @@ export default function PriceStatus({ isLoading, hasError, isFallback, lastUpdat
   if (isLoading) {
     return (
       <HStack spacing={2}>
-        <Icon as={FaWifi} color="yellow.400" />
-        <Text fontSize="xs" color="gray.500">
-          Conectando...
-        </Text>
+        <Icon as={FaWifi} color="brand.400" />
+        <Badge colorScheme="brand" variant="subtle">
+          Conectando…
+        </Badge>
       </HStack>
     )
   }
@@ -27,40 +27,40 @@ export default function PriceStatus({ isLoading, hasError, isFallback, lastUpdat
     return (
       <HStack spacing={2}>
         <Icon as={FaWifi} color="red.400" />
-        <Text fontSize="xs" color="red.500">
-          Error de conexión
-        </Text>
+        <Badge colorScheme="red" variant="subtle">
+          Sin conexión
+        </Badge>
       </HStack>
     )
   }
 
   if (isFallback) {
     return (
-      <Tooltip label={`Usando datos simulados - Fuente: ${source || 'fallback'}`} placement="top">
+      <Tooltip label={`Datos simulados — ${source || 'fallback'}`} placement="top">
         <HStack spacing={2}>
           <Icon as={FaInfoCircle} color="orange.400" />
-          <Text fontSize="xs" color="orange.500">
-            Datos simulados
-          </Text>
+          <Badge colorScheme="orange" variant="subtle">
+            Simulado
+          </Badge>
         </HStack>
       </Tooltip>
     )
   }
 
   return (
-    <HStack spacing={2}>
-      <Icon as={FaWifi} color="green.400" />
-      <Text fontSize="xs" color="green.500">
-        Datos en tiempo real
-      </Text>
+    <HStack spacing={2} flexWrap="wrap">
+      <Icon as={FaWifi} color="green.500" />
+      <Badge colorScheme="green" variant="subtle">
+        En vivo
+      </Badge>
       {source && (
-        <Text fontSize="xs" color="gray.400">
-          • {source === 'binance-p2p-manual' ? 'Binance P2P' : source}
+        <Text fontSize="xs" color="gray.500">
+          {source === 'binance-p2p-manual' ? 'Binance P2P' : source}
         </Text>
       )}
       {lastUpdate && (
         <Text fontSize="xs" color="gray.400">
-          • {new Date(lastUpdate).toLocaleTimeString('es-VE')}
+          {new Date(lastUpdate).toLocaleTimeString('es-VE')}
         </Text>
       )}
     </HStack>

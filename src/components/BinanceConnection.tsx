@@ -182,14 +182,19 @@ export default function BinanceConnection() {
 
   return (
     <Card>
-      <CardHeader>
-        <Heading size="md">Conexión con Binance</Heading>
+      <CardHeader borderBottomWidth="1px" borderColor="surface.border" bg="surface.muted">
+        <Heading size="md" color="gray.800">
+          API y sincronización
+        </Heading>
+        <Text fontSize="sm" color="gray.500" mt={1}>
+          Credenciales cifradas y sync automático cada 2 min
+        </Text>
       </CardHeader>
       <CardBody>
         <VStack spacing={4} align="stretch">
           {isConnected && credentials ? (
             <>
-              <Alert status="success" borderRadius="md">
+              <Alert status="success" borderRadius="xl" variant="subtle">
                 <AlertIcon as={FaCheckCircle} />
                 <Box>
                   <AlertTitle>Conectado a Binance</AlertTitle>
@@ -199,7 +204,7 @@ export default function BinanceConnection() {
                 </Box>
               </Alert>
 
-              <Box p={4} bg="gray.50" borderRadius="md">
+              <Box p={4} bg="surface.muted" borderRadius="xl" borderWidth="1px" borderColor="surface.border">
                 <VStack spacing={2} align="start">
                   <HStack>
                     <Text fontWeight="bold">Estado:</Text>
