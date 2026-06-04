@@ -18,7 +18,7 @@ export async function extractAmountFromImage(buffer: Buffer): Promise<number | n
       const amounts: number[] = []
 
       for (const pattern of amountPatterns) {
-        const matches = text.matchAll(pattern)
+        const matches = Array.from(text.matchAll(pattern))
         for (const match of matches) {
           const amountStr = match[1] || match[0]
           const normalized = amountStr.replace(/\./g, '').replace(',', '.')

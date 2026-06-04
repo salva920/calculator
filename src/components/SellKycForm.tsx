@@ -187,7 +187,7 @@ export default function SellKycForm({ transactionId, orderNumber }: SellKycFormP
   const renderImageField = (
     field: KycImageField,
     label: string,
-    existingUrl?: string
+    existingUrl?: string | null
   ) => (
     <FormControl>
       <FormLabel fontSize="sm">{label}</FormLabel>
