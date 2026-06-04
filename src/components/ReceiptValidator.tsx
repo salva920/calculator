@@ -338,7 +338,6 @@ export default function ReceiptValidator({
                     borderRadius="xl"
                     borderWidth="1px"
                     borderColor="surface.border"
-                    borderColor="gray.200"
                   >
                     <HStack justify="space-between">
                       <HStack>
