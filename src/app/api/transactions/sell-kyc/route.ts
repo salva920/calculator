@@ -3,7 +3,11 @@ export const maxDuration = 30
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { fileToDataUrl } from '@/lib/store-upload-image'
+import {
+  fileToDataUrl,
+  getLegacyKycImageFields,
+  sanitizeKycImagesForClient,
+} from '@/lib/store-upload-image'
 
 export async function POST(request: NextRequest) {
   try {
@@ -101,7 +105,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      kyc,
+      kyc: sanitizeKycImagesForClient(kyc),
       message: existingKyc ? 'KYC actualizado correctamente' : 'KYC registrado correctamente',
     })
   } catch (error: any) {
@@ -138,7 +142,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      kyc,
+      kyc: kyc ? sanitizeKycImagesForClient(kyc) : null,
+      legacyImageFields: kyc ? getLegacyKycImageFields(kyc) : [],
     })
   } catch (error: any) {
     console.error('Error obteniendo KYC de venta:', error)

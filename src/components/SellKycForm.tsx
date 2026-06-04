@@ -44,6 +44,7 @@ export default function SellKycForm({ transactionId, orderNumber }: SellKycFormP
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [existingKyc, setExistingKyc] = useState<SellKycResponse | null>(null)
+  const [legacyImageFields, setLegacyImageFields] = useState<string[]>([])
 
   const [accountNumber, setAccountNumber] = useState('')
   const [bankName, setBankName] = useState('')
@@ -77,16 +78,19 @@ export default function SellKycForm({ transactionId, orderNumber }: SellKycFormP
       if (response.data.success && response.data.kyc) {
         const kyc: SellKycResponse = response.data.kyc
         setExistingKyc(kyc)
+        setLegacyImageFields(response.data.legacyImageFields ?? [])
         setBankName(kyc.bankName || '')
         setAccountNumber(kyc.accountNumber || '')
         setFullName(kyc.fullName || '')
         setIdNumber(kyc.idNumber || '')
       } else {
         setExistingKyc(null)
+        setLegacyImageFields([])
       }
     } catch (error) {
       console.error('Error cargando KYC:', error)
       setExistingKyc(null)
+      setLegacyImageFields([])
     } finally {
       setIsLoading(false)
     }
@@ -185,11 +189,19 @@ export default function SellKycForm({ transactionId, orderNumber }: SellKycFormP
     }
   }
 
+  const legacyFieldMap: Record<KycImageField, string> = {
+    idCardImage: 'idCardImageUrl',
+    swornDeclarationImage: 'swornDeclarationImageUrl',
+    sourceOfFundsImage: 'sourceOfFundsImageUrl',
+  }
+
   const renderImageField = (
     field: KycImageField,
     label: string,
     existingUrl?: string | null
-  ) => (
+  ) => {
+    const needsReupload = legacyImageFields.includes(legacyFieldMap[field])
+    return (
     <FormControl>
       <FormLabel fontSize="sm">{label}</FormLabel>
       <Input
@@ -231,14 +243,20 @@ export default function SellKycForm({ transactionId, orderNumber }: SellKycFormP
             />
           </Box>
         )}
-        {!previews[field] && existingUrl && !isInlineImageRef(existingUrl) && (
+        {!previews[field] && needsReupload && (
+          <Text fontSize="xs" color="orange.600" maxW="220px">
+            Foto en formato antiguo (solo en PC). Súbela otra vez y guarda para verla aquí.
+          </Text>
+        )}
+        {!previews[field] && existingUrl && !isInlineImageRef(existingUrl) && !needsReupload && (
           <Text fontSize="xs" color="orange.600" maxW="200px">
             Imagen no disponible. Sube el archivo de nuevo.
           </Text>
         )}
       </HStack>
     </FormControl>
-  )
+    )
+  }
 
   return (
     <VStack align="stretch" spacing={3}>

@@ -113,10 +113,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
+          code: 'CREDENTIALS_DECRYPT_FAILED',
           error:
-            'No se pudieron leer las credenciales de Binance. Verifica que ENCRYPTION_KEY en Vercel sea la misma con la que se guardaron.',
+            'No se pudieron leer las credenciales de Binance. En Vercel, ENCRYPTION_KEY debe ser exactamente la misma que en tu .env local al guardar las claves (o vuelve a guardar las credenciales en Conexión Binance).',
         },
-        { status: 500 }
+        { status: 400 }
       )
     }
 

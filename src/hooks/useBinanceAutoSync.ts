@@ -26,9 +26,14 @@ export function useBinanceAutoSync() {
                 const status = error.response?.status
                 const msg = error.response?.data?.error as string | undefined
                 // Respuestas esperadas: sin credenciales, sync deshabilitado
-                if (status === 400) return
-                if (status === 500 && msg?.includes('ENCRYPTION_KEY')) {
-                  console.warn('Sync automático:', msg)
+                if (status === 400) {
+                  if (
+                    msg?.includes('ENCRYPTION_KEY') ||
+                    msg?.includes('credenciales de Binance') ||
+                    error.response?.data?.code === 'CREDENTIALS_DECRYPT_FAILED'
+                  ) {
+                    return
+                  }
                   return
                 }
               }
