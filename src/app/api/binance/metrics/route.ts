@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { processAndSaveCycles } from '@/utils/cycle-processor'
 import { formatDateYmdCaracas, getTodayBoundsCaracas, isCompletedInWindow } from '@/utils/caracas-date'
+import {
+  getMetricsCacheEntry,
+  METRICS_CACHE_TTL_MS,
+  setMetricsCacheEntry,
+} from '@/lib/metrics-cache'
 
 const MIN_CYCLE_USDT = 0.01 // mínimo para considerar un ciclo (evitar polvo)
 const prismaAny = prisma as any
@@ -12,15 +17,6 @@ type ManualAdjustmentRecord = {
   usdtAmount: number
   note: string | null
   createdAt: Date
-}
-
-// Cache simple en memoria para métricas (5 segundos)
-const metricsCache = new Map<string, { data: any; timestamp: number }>()
-const CACHE_TTL_MS = 5000 // 5 segundos
-
-/** Invalida la caché de métricas (p. ej. tras un sync) para que la siguiente petición traiga datos frescos */
-export function invalidateMetricsCache() {
-  metricsCache.clear()
 }
 
 export async function GET(request: NextRequest) {
@@ -34,8 +30,8 @@ export async function GET(request: NextRequest) {
     // Verificar caché (omitir si refresh o procesando ciclos)
     if (!shouldProcessCycles && !forceRefresh) {
       const cacheKey = `metrics-${dateFilter}`
-      const cached = metricsCache.get(cacheKey)
-      if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+      const cached = getMetricsCacheEntry(cacheKey)
+      if (cached && Date.now() - cached.timestamp < METRICS_CACHE_TTL_MS) {
         return NextResponse.json({
           success: true,
           metrics: cached.data,
@@ -555,7 +551,7 @@ export async function GET(request: NextRequest) {
 
     // Guardar en caché
     const cacheKey = `metrics-${dateFilter}`
-    metricsCache.set(cacheKey, { data: metrics, timestamp: Date.now() })
+    setMetricsCacheEntry(cacheKey, metrics)
     
     return NextResponse.json({
       success: true,

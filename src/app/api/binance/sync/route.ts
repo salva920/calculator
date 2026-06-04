@@ -6,7 +6,7 @@ import { calculateProfits } from '@/utils/calculations'
 import { calculateBankCommission, getPaymentCommission } from '@/lib/payment-commissions'
 import { processAndSaveCycles } from '@/utils/cycle-processor'
 import { getTodayBoundsCaracas, parseDayBoundsCaracas } from '@/utils/caracas-date'
-import { invalidateMetricsCache } from '@/app/api/binance/metrics/route'
+import { invalidateMetricsCache } from '@/lib/metrics-cache'
 import { Prisma } from '@prisma/client'
 
 const DEFAULT_BACKFILL_DAYS = 7

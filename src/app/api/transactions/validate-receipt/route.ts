@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { extractAmountFromImage } from '@/lib/receipt-ocr'
 import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import { existsSync } from 'fs'
@@ -103,61 +104,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Función para extraer monto de la imagen usando OCR
-// NOTA: Esta implementación usa una aproximación básica
-// Para mejor precisión, instala tesseract.js: npm install tesseract.js
-export async function extractAmountFromImage(buffer: Buffer): Promise<number | null> {
-  try {
-    // Intentar usar Tesseract.js si está disponible
-    try {
-      const { createWorker } = await import('tesseract.js')
-      const worker = await createWorker('spa') // Español
-      
-      const { data: { text } } = await worker.recognize(buffer)
-      await worker.terminate()
-      
-      // Buscar montos en el texto usando regex
-      // Patrones comunes: Bs.S 1.234,56 | 1.234,56 Bs.S | 1234.56 | etc.
-      const amountPatterns = [
-        /Bs\.?\s*S\.?\s*([\d.,]+)/gi, // Bs.S 1.234,56
-        /([\d.,]+)\s*Bs\.?\s*S\.?/gi, // 1.234,56 Bs.S
-        /([\d]{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)/g, // Números con formato de moneda
-      ]
-      
-      const amounts: number[] = []
-      
-      for (const pattern of amountPatterns) {
-        const matches = text.matchAll(pattern)
-        for (const match of matches) {
-          const amountStr = match[1] || match[0]
-          // Convertir formato venezolano (1.234,56) a número
-          const normalized = amountStr.replace(/\./g, '').replace(',', '.')
-          const amount = parseFloat(normalized)
-          if (!isNaN(amount) && amount > 0 && amount < 100000000) {
-            amounts.push(amount)
-          }
-        }
-      }
-      
-      // Retornar el monto más grande encontrado (probablemente el total)
-      if (amounts.length > 0) {
-        return Math.max(...amounts)
-      }
-      
-      return null
-    } catch (tesseractError) {
-      // Si Tesseract no está disponible, retornar null
-      // El usuario puede ingresar el monto manualmente
-      console.log('Tesseract.js no disponible, usando validación manual')
-      return null
-    }
-  } catch (error) {
-    console.error('Error extrayendo monto de imagen:', error)
-    return null
-  }
-}
-
-// Obtener validaciones de una transacción
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)

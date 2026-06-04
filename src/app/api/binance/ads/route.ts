@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
       sellAds: typeof adsMap extends Map<string, infer V> ? V : never
     }>()
 
-    for (const [key, ad] of adsMap.entries()) {
+    for (const [, ad] of Array.from(adsMap.entries())) {
       if (!advNoMap.has(ad.advNo)) {
         advNoMap.set(ad.advNo, {
           advNo: ad.advNo,
