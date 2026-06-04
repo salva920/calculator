@@ -35,6 +35,7 @@ import { useBinancePrice } from '@/hooks/useBinancePrice'
 import { useSaveTransaction } from '@/hooks/useTransactions'
 import { calculateProfits } from '@/utils/calculations'
 import PriceStatus from './PriceStatus'
+import InsightPanel from '@/components/ui/InsightPanel'
 
 const MotionBox = motion(Box)
 
@@ -489,9 +490,9 @@ export default function CalculatorForm({ onResultsChange, onFormDataChange }: Ca
                 </Box>
 
                 {/* Metas P2P */}
-                <Box w="full" p={4} bg="green.50" borderRadius="md" border="1px solid" borderColor="green.200">
+                <InsightPanel accent="green" w="full">
                   <Text fontWeight="bold" color="green.700" mb={3}>
-                    Metas P2P a Alcanzar
+                    Metas P2P a alcanzar
                   </Text>
                   <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
                     <FormControl>
@@ -526,13 +527,12 @@ export default function CalculatorForm({ onResultsChange, onFormDataChange }: Ca
                       </NumberInput>
                     </FormControl>
                   </SimpleGrid>
-                </Box>
+                </InsightPanel>
               </VStack>
             </Box>
 
-            {/* Error de precio */}
             {priceError && (
-              <Alert status="warning">
+              <Alert status="warning" borderRadius="xl" variant="subtle">
                 <AlertIcon />
                 <AlertTitle>Error de precio!</AlertTitle>
                 <AlertDescription>
@@ -543,7 +543,7 @@ export default function CalculatorForm({ onResultsChange, onFormDataChange }: Ca
 
             <HStack spacing={4} w="full">
               <Button
-                colorScheme="blue"
+                colorScheme="brand"
                 size="lg"
                 onClick={handleCalculate}
                 isLoading={priceLoading}
@@ -562,7 +562,7 @@ export default function CalculatorForm({ onResultsChange, onFormDataChange }: Ca
                 flex="1"
                 isDisabled={!results}
               >
-                💾 Guardar Transacción
+                Guardar transacción
               </Button>
             </HStack>
           </VStack>

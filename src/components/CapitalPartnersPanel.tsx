@@ -226,11 +226,11 @@ export default function CapitalPartnersPanel() {
 
   return (
     <Card>
-      <CardHeader>
-        <Heading size="md" color="purple.600">
-          Capital prestado (USDT) y reparto diario
+      <CardHeader borderBottomWidth="1px" borderColor="surface.border" bg="surface.muted">
+        <Heading size="md" color="gray.800">
+          Capital y reparto diario
         </Heading>
-        <Text fontSize="sm" color="gray.600" mt={1}>
+        <Text fontSize="sm" color="gray.500" mt={1}>
           Montos en <strong>USDT</strong>. Cada socio tiene <strong>fecha de ingreso</strong> (Caracas): la columna
           &quot;Meta acum.&quot; es capital × % diario × <strong>días calendario desde el ingreso hasta hoy</strong>{' '}
           (interés lineal simple). Opcional: <strong>Bs.S por USDT</strong> para equivalencia. El reparto del día es
@@ -243,7 +243,7 @@ export default function CapitalPartnersPanel() {
         ) : (
           <VStack align="stretch" spacing={4}>
             {loadError && (
-              <Alert status="error" borderRadius="md">
+              <Alert status="error" borderRadius="xl" variant="subtle">
                 <AlertIcon />
                 <AlertTitle fontSize="sm">{loadError}</AlertTitle>
               </Alert>
@@ -266,7 +266,7 @@ export default function CapitalPartnersPanel() {
                 <Text fontSize="xs" color="gray.600">
                   Meta diaria esperada (USDT, suma % acordado)
                 </Text>
-                <Text fontSize="lg" fontWeight="semibold" color="orange.600">
+                <Text fontSize="lg" fontWeight="semibold" color="brand.600">
                   {fmtUsdt(expectedDailyUsdt)}
                 </Text>
                 {showVes && (
@@ -279,7 +279,7 @@ export default function CapitalPartnersPanel() {
                 <Text fontSize="xs" color="gray.600">
                   Socios activos
                 </Text>
-                <Badge colorScheme="purple" fontSize="md">
+                <Badge colorScheme="brand" fontSize="md">
                   {partners.length}
                 </Badge>
               </Box>
@@ -318,7 +318,7 @@ export default function CapitalPartnersPanel() {
               </Box>
             )}
 
-            <Box p={3} bg="gray.50" borderRadius="md" borderWidth="1px">
+            <Box p={4} bg="surface.muted" borderRadius="xl" borderWidth="1px" borderColor="surface.border">
               <Text fontWeight="semibold" mb={2} fontSize="sm">
                 Agregar socio
               </Text>
@@ -353,7 +353,7 @@ export default function CapitalPartnersPanel() {
                     onChange={(e) => setNewEntryDate(e.target.value)}
                   />
                 </FormControl>
-                <Button leftIcon={<FaPlus />} size="sm" colorScheme="purple" onClick={handleAdd} isLoading={saving}>
+                <Button leftIcon={<FaPlus />} size="sm" colorScheme="brand" onClick={handleAdd} isLoading={saving}>
                   Agregar
                 </Button>
               </HStack>

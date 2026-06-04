@@ -28,6 +28,8 @@ import {
 } from '@chakra-ui/react'
 import { motion } from 'framer-motion'
 import { CalculationResults, FormData } from '@/utils/calculations'
+import InsightPanel from '@/components/ui/InsightPanel'
+import StatTile from '@/components/ui/StatTile'
 
 const MotionBox = motion(Box)
 
@@ -76,17 +78,20 @@ export default function ExecutiveSummary({ results, formData }: ExecutiveSummary
       transition={{ duration: 0.5, delay: 0.2 }}
     >
       <Card>
-        <CardHeader>
-          <Heading size="md" color="purple.600">
-            📊 Resumen Ejecutivo - Cálculo de Tasas y Ganancia
+        <CardHeader borderBottomWidth="1px" borderColor="surface.border" bg="surface.muted">
+          <Heading size="md" color="gray.800">
+            Resumen ejecutivo
           </Heading>
+          <Text fontSize="sm" color="gray.500" mt={1}>
+            Tasas, proyecciones y metas de perfil P2P
+          </Text>
         </CardHeader>
         <CardBody>
           <VStack spacing={6}>
             {/* Datos de Entrada */}
             <Box w="full">
-              <Text fontWeight="bold" mb={3} color="blue.600">
-                Datos de Entrada
+              <Text fontWeight="bold" mb={3} color="gray.700">
+                Datos de entrada
               </Text>
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
                 <HStack justify="space-between">
@@ -108,8 +113,8 @@ export default function ExecutiveSummary({ results, formData }: ExecutiveSummary
 
             {/* Cálculos Principales */}
             <Box w="full">
-              <Text fontWeight="bold" mb={3} color="green.600">
-                Cálculos Principales
+              <Text fontWeight="bold" mb={3} color="gray.700">
+                Cálculos principales
               </Text>
               
               <TableContainer>
@@ -148,33 +153,27 @@ export default function ExecutiveSummary({ results, formData }: ExecutiveSummary
 
             {/* Proyecciones de Ganancia */}
             <Box w="full">
-              <Text fontWeight="bold" mb={3} color="purple.600">
-                Proyecciones de Ganancia
+              <Text fontWeight="bold" mb={3} color="gray.700">
+                Proyecciones de ganancia
               </Text>
               
               <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
-                <Stat textAlign="center" p={3} bg="blue.50" borderRadius="md">
-                  <StatLabel color="blue.600">Ciclos al Día</StatLabel>
-                  <StatNumber color="blue.700">{cyclesPerDay}</StatNumber>
-                </Stat>
-                
-                <Stat textAlign="center" p={3} bg="green.50" borderRadius="md">
-                  <StatLabel color="green.600">Ganancia Diaria</StatLabel>
-                  <StatNumber color="green.700">
-                    ${dailyProfit.toFixed(2)}
-                  </StatNumber>
-                </Stat>
-                
-                <Stat textAlign="center" p={3} bg="purple.50" borderRadius="md">
-                  <StatLabel color="purple.600">Ganancia Mensual</StatLabel>
-                  <StatNumber color="purple.700">
-                    ${monthlyProfit.toFixed(2)}
-                  </StatNumber>
+                <StatTile accent="blue">
+                  <StatLabel color="blue.700">Ciclos al día</StatLabel>
+                  <StatNumber color="blue.800">{cyclesPerDay}</StatNumber>
+                </StatTile>
+                <StatTile accent="green">
+                  <StatLabel color="green.700">Ganancia diaria</StatLabel>
+                  <StatNumber color="green.800">{dailyProfit.toFixed(2)} Bs.S</StatNumber>
+                </StatTile>
+                <StatTile accent="purple">
+                  <StatLabel color="purple.700">Ganancia mensual</StatLabel>
+                  <StatNumber color="purple.800">{monthlyProfit.toFixed(2)} Bs.S</StatNumber>
                   <StatHelpText>
                     <StatArrow type="increase" />
                     {monthlyROI.toFixed(1)}% ROI
                   </StatHelpText>
-                </Stat>
+                </StatTile>
               </SimpleGrid>
             </Box>
 
@@ -182,14 +181,14 @@ export default function ExecutiveSummary({ results, formData }: ExecutiveSummary
 
             {/* Análisis de Perfil P2P */}
             <Box w="full">
-              <Text fontWeight="bold" mb={3} color="orange.600">
-                Análisis de Perfil P2P
+              <Text fontWeight="bold" mb={3} color="gray.700">
+                Perfil P2P
               </Text>
               
               <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
-                <Box p={3} bg="orange.50" borderRadius="md">
+                <InsightPanel accent="orange" p={3}>
                   <Text fontSize="sm" fontWeight="semibold" color="orange.700" mb={2}>
-                    Perfil Actual
+                    Perfil actual
                   </Text>
                   <VStack spacing={1} align="stretch">
                     <HStack justify="space-between">
@@ -205,11 +204,11 @@ export default function ExecutiveSummary({ results, formData }: ExecutiveSummary
                       <Text fontSize="xs" fontWeight="bold">{currentProfile.btcTotal}</Text>
                     </HStack>
                   </VStack>
-                </Box>
+                </InsightPanel>
                 
-                <Box p={3} bg="green.50" borderRadius="md">
+                <InsightPanel accent="green" p={3}>
                   <Text fontSize="sm" fontWeight="semibold" color="green.700" mb={2}>
-                    Meta a Lograr
+                    Meta a lograr
                   </Text>
                   <VStack spacing={1} align="stretch">
                     <HStack justify="space-between">
@@ -225,11 +224,11 @@ export default function ExecutiveSummary({ results, formData }: ExecutiveSummary
                       <Text fontSize="xs" fontWeight="bold">0.0 días</Text>
                     </HStack>
                   </VStack>
-                </Box>
+                </InsightPanel>
                 
-                <Box p={3} bg="purple.50" borderRadius="md">
+                <InsightPanel accent="purple" p={3}>
                   <Text fontSize="sm" fontWeight="semibold" color="purple.700" mb={2}>
-                    Tiempo Total
+                    Tiempo total
                   </Text>
                   <VStack spacing={1} align="stretch">
                     <HStack justify="space-between">
@@ -238,35 +237,35 @@ export default function ExecutiveSummary({ results, formData }: ExecutiveSummary
                         {totalDays.toFixed(0)} días
                       </Text>
                     </HStack>
-                    <Progress 
-                      value={Math.min(100, (currentProfile.totalOrders / targetProfile.totalOrders) * 100)} 
-                      colorScheme="purple" 
-                      size="sm" 
+                    <Progress
+                      value={Math.min(100, (currentProfile.totalOrders / targetProfile.totalOrders) * 100)}
+                      colorScheme="brand"
+                      size="sm"
+                      borderRadius="full"
                     />
                     <Text fontSize="xs" color="gray.500" textAlign="center">
                       Progreso hacia meta
                     </Text>
                   </VStack>
-                </Box>
+                </InsightPanel>
               </SimpleGrid>
             </Box>
 
-            {/* Resumen Final */}
-            <Box w="full" p={4} bg={profitColor + '.50'} borderRadius="md" border="1px solid" borderColor={profitColor + '.200'}>
+            <InsightPanel accent={isProfitable ? 'green' : 'red'} w="full">
               <HStack justify="space-between" mb={2}>
                 <Text fontWeight="bold" color={profitColor + '.700'}>
-                  Resumen Final
+                  Resumen final
                 </Text>
                 <Badge colorScheme={profitColor} fontSize="sm">
                   {isProfitable ? 'Rentable' : 'Pérdida'}
                 </Badge>
               </HStack>
-              <Text fontSize="sm" color={profitColor + '.600'}>
+              <Text fontSize="sm" color="gray.700">
                 Con {cyclesPerDay} ciclos diarios, esta estrategia generaría{' '}
-                <strong>${monthlyProfit.toFixed(2)}</strong> mensuales con un ROI del{' '}
+                <strong>{monthlyProfit.toFixed(2)} Bs.S</strong> mensuales con un ROI del{' '}
                 <strong>{monthlyROI.toFixed(1)}%</strong>.
               </Text>
-            </Box>
+            </InsightPanel>
           </VStack>
         </CardBody>
       </Card>

@@ -31,7 +31,9 @@ import {
   SimpleGrid
 } from '@chakra-ui/react'
 import { motion } from 'framer-motion'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import InsightPanel from '@/components/ui/InsightPanel'
+import StatTile from '@/components/ui/StatTile'
 
 const MotionBox = motion(Box)
 
@@ -51,8 +53,11 @@ export default function ResultsDisplay({ results, formData }: ResultsDisplayProp
         transition={{ duration: 0.5 }}
       >
         <Card>
-          <CardHeader>
-            <Heading size="md">Resultados</Heading>
+          <CardHeader borderBottomWidth="1px" borderColor="surface.border" bg="surface.muted">
+            <Heading size="md" color="gray.800">Resultados</Heading>
+            <Text fontSize="sm" color="gray.500" mt={1}>
+              Completa el formulario para simular
+            </Text>
           </CardHeader>
           <CardBody>
             <VStack spacing={4} align="center" py={8}>
@@ -90,8 +95,11 @@ export default function ResultsDisplay({ results, formData }: ResultsDisplayProp
       transition={{ duration: 0.5 }}
     >
       <Card>
-        <CardHeader>
-          <Heading size="md">Resultados del Cálculo</Heading>
+        <CardHeader borderBottomWidth="1px" borderColor="surface.border" bg="surface.muted">
+          <Heading size="md" color="gray.800">Resultados del cálculo</Heading>
+          <Text fontSize="sm" color="gray.500" mt={1}>
+            Rentabilidad, desglose y proyecciones
+          </Text>
         </CardHeader>
         <CardBody>
           <VStack spacing={6}>
@@ -107,23 +115,23 @@ export default function ResultsDisplay({ results, formData }: ResultsDisplayProp
               </HStack>
 
               <VStack spacing={4}>
-                <Stat textAlign="center">
-                  <StatLabel>Ganancia Neta</StatLabel>
-                  <StatNumber color={profitColor + '.500'} fontSize="2xl">
+                <StatTile accent={isProfitable ? 'green' : 'red'} w="full">
+                  <StatLabel color={profitColor + '.700'}>Ganancia neta</StatLabel>
+                  <StatNumber color={profitColor + '.600'} fontSize="2xl">
                     {results.netProfit.toLocaleString('es-VE', { style: 'currency', currency: 'VES' })}
                   </StatNumber>
                   <StatHelpText>
                     <StatArrow type={isProfitable ? 'increase' : 'decrease'} />
                     {results.roi.toFixed(2)}% ROI
                   </StatHelpText>
-                </Stat>
+                </StatTile>
 
                 <Progress
-                  value={Math.abs(results.roi)}
-                  colorScheme={profitColor}
+                  value={Math.min(100, Math.abs(results.roi))}
+                  colorScheme={isProfitable ? 'green' : 'red'}
                   size="lg"
                   w="full"
-                  borderRadius="md"
+                  borderRadius="full"
                 />
               </VStack>
             </Box>
@@ -228,7 +236,7 @@ export default function ResultsDisplay({ results, formData }: ResultsDisplayProp
                         ''
                       ]}
                     />
-                    <Bar dataKey="value" fill="#3182CE" />
+                    <Bar dataKey="value" fill="#f59e0b" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </Box>
@@ -236,7 +244,7 @@ export default function ResultsDisplay({ results, formData }: ResultsDisplayProp
 
             {/* Alertas y Recomendaciones */}
             {results.netProfit < 0 && (
-              <Alert status="warning">
+              <Alert status="warning" borderRadius="xl" variant="subtle">
                 <AlertIcon />
                 <Box>
                   <AlertTitle>Transacción no rentable!</AlertTitle>
@@ -248,7 +256,7 @@ export default function ResultsDisplay({ results, formData }: ResultsDisplayProp
             )}
 
             {results.profitMargin < 5 && results.netProfit > 0 && (
-              <Alert status="info">
+              <Alert status="info" borderRadius="xl" variant="subtle">
                 <AlertIcon />
                 <Box>
                   <AlertTitle>Margen bajo</AlertTitle>
@@ -260,7 +268,7 @@ export default function ResultsDisplay({ results, formData }: ResultsDisplayProp
             )}
 
             {results.profitMargin > 20 && (
-              <Alert status="success">
+              <Alert status="success" borderRadius="xl" variant="subtle">
                 <AlertIcon />
                 <Box>
                   <AlertTitle>Excelente oportunidad!</AlertTitle>
@@ -275,81 +283,68 @@ export default function ResultsDisplay({ results, formData }: ResultsDisplayProp
             <Divider />
             
             <VStack spacing={4} align="stretch">
-              <Heading size="md" color="blue.500">
-                📊 Proyecciones Avanzadas
+              <Heading size="md" color="gray.800">
+                Proyecciones avanzadas
               </Heading>
               
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                {/* Ciclos Diarios */}
-                <Box p={4} bg="blue.50" borderRadius="md" border="1px solid" borderColor="blue.200">
+                <InsightPanel accent="blue">
                   <Text fontWeight="bold" color="blue.700" mb={2}>
-                    🔄 Ciclos Diarios
+                    Ciclos diarios
                   </Text>
-                  <Text fontSize="sm" color="blue.600">
-                    Ciclos estimados: <strong>{formData?.cyclesPerDay || 5}</strong>
+                  <Text fontSize="sm" color="blue.700">
+                    Ciclos: <strong>{formData?.cyclesPerDay || 5}</strong>
                   </Text>
-                  <Text fontSize="sm" color="blue.600">
-                    Ganancia por ciclo: <strong>${results.grossProfit.toFixed(2)}</strong>
+                  <Text fontSize="sm" color="blue.700">
+                    Por ciclo: <strong>{results.grossProfit.toFixed(2)} Bs.S</strong>
                   </Text>
-                  <Text fontSize="sm" color="blue.600">
-                    Ganancia diaria: <strong>${(results.grossProfit * (formData?.cyclesPerDay || 5)).toFixed(2)}</strong>
+                  <Text fontSize="sm" color="blue.700">
+                    Diario: <strong>{(results.grossProfit * (formData?.cyclesPerDay || 5)).toFixed(2)} Bs.S</strong>
                   </Text>
-                </Box>
+                </InsightPanel>
 
-                {/* Proyección Mensual */}
-                <Box p={4} bg="green.50" borderRadius="md" border="1px solid" borderColor="green.200">
+                <InsightPanel accent="green">
                   <Text fontWeight="bold" color="green.700" mb={2}>
-                    📅 Proyección Mensual
+                    Proyección mensual
                   </Text>
-                  <Text fontSize="sm" color="green.600">
-                    Ganancia mensual: <strong>${(results.grossProfit * (formData?.cyclesPerDay || 5) * (formData?.workingDaysPerMonth || 30)).toFixed(2)}</strong>
+                  <Text fontSize="sm" color="green.700">
+                    Mensual: <strong>{(results.grossProfit * (formData?.cyclesPerDay || 5) * (formData?.workingDaysPerMonth || 30)).toFixed(2)} Bs.S</strong>
                   </Text>
-                  <Text fontSize="sm" color="green.600">
-                    ROI mensual: <strong>{((results.grossProfit * (formData?.cyclesPerDay || 5) * (formData?.workingDaysPerMonth || 30)) / ((formData?.usdtAmount || 0) * (formData?.buyPrice || 0)) * 100).toFixed(1)}%</strong>
+                  <Text fontSize="sm" color="green.700">
+                    ROI: <strong>{((results.grossProfit * (formData?.cyclesPerDay || 5) * (formData?.workingDaysPerMonth || 30)) / ((formData?.usdtAmount || 0) * (formData?.buyPrice || 0)) * 100).toFixed(1)}%</strong>
                   </Text>
-                </Box>
+                </InsightPanel>
               </SimpleGrid>
 
-              {/* Análisis de Perfil P2P */}
-              <Box p={4} bg="purple.50" borderRadius="md" border="1px solid" borderColor="purple.200">
+              <InsightPanel accent="purple">
                 <Text fontWeight="bold" color="purple.700" mb={3}>
-                  🎯 Análisis de Perfil P2P
+                  Perfil P2P (referencia)
                 </Text>
-                
                 <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
                   <Box>
-                    <Text fontSize="sm" fontWeight="semibold" color="purple.600" mb={1}>
-                      Perfil Actual
+                    <Text fontSize="sm" fontWeight="semibold" color="purple.700" mb={1}>
+                      Actual
                     </Text>
-                    <Text fontSize="xs" color="purple.500">Total órdenes: 150</Text>
-                    <Text fontSize="xs" color="purple.500">BTC 30 días: 0.3</Text>
-                    <Text fontSize="xs" color="purple.500">BTC total: 2</Text>
+                    <Text fontSize="xs" color="gray.600">Órdenes: 150 · BTC 30d: 0.3</Text>
                   </Box>
-                  
                   <Box>
-                    <Text fontSize="sm" fontWeight="semibold" color="purple.600" mb={1}>
-                      Meta a Lograr
+                    <Text fontSize="sm" fontWeight="semibold" color="purple.700" mb={1}>
+                      Meta
                     </Text>
-                    <Text fontSize="xs" color="purple.500">450 órdenes</Text>
-                    <Text fontSize="xs" color="purple.500">1 BTC en 30 días</Text>
-                    <Text fontSize="xs" color="purple.500">2 BTC total</Text>
+                    <Text fontSize="xs" color="gray.600">450 órdenes · 1 BTC / 30d</Text>
                   </Box>
-                  
                   <Box>
-                    <Text fontSize="sm" fontWeight="semibold" color="purple.600" mb={1}>
-                      Tiempo Estimado
+                    <Text fontSize="sm" fontWeight="semibold" color="purple.700" mb={1}>
+                      Tiempo est.
                     </Text>
-                    <Text fontSize="xs" color="purple.500">450 órdenes: 1.4 días</Text>
-                    <Text fontSize="xs" color="purple.500">1 BTC: 16.2 días</Text>
-                    <Text fontSize="xs" color="purple.500">Total: 16 días</Text>
+                    <Text fontSize="xs" color="gray.600">~16 días (según ciclos)</Text>
                   </Box>
                 </SimpleGrid>
-              </Box>
+              </InsightPanel>
 
-              {/* Alertas de Margen Mejoradas */}
-              <Box p={4} bg="orange.50" borderRadius="md" border="1px solid" borderColor="orange.200">
+              <InsightPanel accent="orange">
                 <Text fontWeight="bold" color="orange.700" mb={2}>
-                  ⚠️ Alertas de Margen
+                  Alertas de margen
                 </Text>
                 {results.profitMargin < 0.5 && (
                   <Text fontSize="sm" color="orange.600">
@@ -366,7 +361,7 @@ export default function ResultsDisplay({ results, formData }: ResultsDisplayProp
                     ✅ Margen saludable ({results.profitMargin.toFixed(1)}%). Buen nivel de ganancia.
                   </Text>
                 )}
-              </Box>
+              </InsightPanel>
             </VStack>
           </VStack>
         </CardBody>

@@ -147,35 +147,24 @@ export default function AdsPerformance() {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader borderBottomWidth="1px" borderColor="surface.border" bg="surface.muted">
         <HStack justify="space-between" flexWrap="wrap" spacing={4}>
-          <Heading size="md">📢 Rendimiento de Anuncios</Heading>
+          <Box>
+            <Heading size="md" color="gray.800">Rendimiento de anuncios</Heading>
+            <Text fontSize="sm" color="gray.500">Compra y venta por anuncio</Text>
+          </Box>
           <HStack spacing={3}>
             <HStack spacing={2}>
               <Text fontSize="sm" color="gray.600">
-                Solo Hoy
+                Solo hoy
               </Text>
               <Switch
                 isChecked={todayOnly}
                 onChange={(e) => setTodayOnly(e.target.checked)}
-                colorScheme="green"
+                colorScheme="brand"
               />
             </HStack>
-            <Box
-              as="span"
-              w="10px"
-              h="10px"
-              bg="green.400"
-              borderRadius="full"
-              display="inline-block"
-              animation="pulse 2s infinite"
-              sx={{
-                '@keyframes pulse': {
-                  '0%, 100%': { opacity: 1 },
-                  '50%': { opacity: 0.5 },
-                },
-              }}
-            />
+            <Box as="span" className="live-dot" w="10px" h="10px" bg="green.400" borderRadius="full" display="inline-block" />
           </HStack>
         </HStack>
       </CardHeader>

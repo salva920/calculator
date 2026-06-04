@@ -35,7 +35,9 @@ import {
 } from '@chakra-ui/react'
 import { motion } from 'framer-motion'
 import { useBalance } from '@/hooks/useTransactions'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import StatTile from '@/components/ui/StatTile'
+import InsightPanel from '@/components/ui/InsightPanel'
 
 const MotionBox = motion(Box)
 
@@ -99,7 +101,7 @@ export default function DailyBalance({ date, days = 7 }: DailyBalanceProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <Alert status="error">
+        <Alert status="error" borderRadius="xl">
           <AlertIcon />
           <Box>
             <AlertTitle>Error!</AlertTitle>
@@ -132,27 +134,38 @@ export default function DailyBalance({ date, days = 7 }: DailyBalanceProps) {
       transition={{ duration: 0.5 }}
     >
       <Card>
-        <CardHeader>
-          <HStack justify="space-between" align="center">
-            <Heading size="md" color="purple.600">
-              💰 Balance Diario - Últimos {filters.days} días
-            </Heading>
-            <ButtonGroup size="sm" variant="outline" isAttached>
+        <CardHeader borderBottomWidth="1px" borderColor="surface.border" bg="surface.muted">
+          <HStack justify="space-between" align="center" flexWrap="wrap" gap={3}>
+            <Box>
+              <Heading size="md" color="gray.800">
+                Últimos {filters.days} días
+              </Heading>
+              <Text fontSize="sm" color="gray.500" mt={0.5}>
+                Ganancias, volumen y detalle por fecha
+              </Text>
+            </Box>
+            <ButtonGroup size="sm" variant="outline" isAttached borderRadius="full" overflow="hidden">
               <Button
                 onClick={setLast7Days}
-                colorScheme={filters.days === 7 && !filters.date ? 'purple' : undefined}
+                borderRadius="0"
+                colorScheme={filters.days === 7 && !filters.date ? 'brand' : 'gray'}
+                variant={filters.days === 7 && !filters.date ? 'solid' : 'outline'}
               >
-                Últimos 7 días
+                7 días
               </Button>
               <Button
                 onClick={setToday}
-                colorScheme={filters.days === 1 && !!filters.date ? 'blue' : undefined}
+                borderRadius="0"
+                colorScheme={filters.days === 1 && !!filters.date ? 'brand' : 'gray'}
+                variant={filters.days === 1 && !!filters.date ? 'solid' : 'outline'}
               >
                 Hoy
               </Button>
               <Button
                 onClick={setYesterday}
-                colorScheme={filters.days === 1 && !!filters.date ? 'green' : undefined}
+                borderRadius="0"
+                colorScheme={filters.days === 1 && !!filters.date ? 'brand' : 'gray'}
+                variant="outline"
               >
                 Ayer
               </Button>
@@ -173,46 +186,40 @@ export default function DailyBalance({ date, days = 7 }: DailyBalanceProps) {
               </HStack>
 
               <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={4}>
-                <Stat textAlign="center" p={3} bg="blue.50" borderRadius="md">
-                  <StatLabel color="blue.600">Ganancia Total</StatLabel>
-                  <StatNumber color="blue.700" fontSize="xl">
-                    ${summary.totalNetProfit.toLocaleString('es-VE', { style: 'currency', currency: 'VES' })}
+                <StatTile accent="brand">
+                  <StatLabel color="brand.700">Ganancia total</StatLabel>
+                  <StatNumber color="brand.800" fontSize="xl">
+                    {summary.totalNetProfit.toLocaleString('es-VE', { style: 'currency', currency: 'VES' })}
                   </StatNumber>
                   <StatHelpText>
                     <StatArrow type={isProfitable ? 'increase' : 'decrease'} />
                     {summary.averageROI.toFixed(2)}% ROI promedio
                   </StatHelpText>
-                </Stat>
+                </StatTile>
 
-                <Stat textAlign="center" p={3} bg="green.50" borderRadius="md">
-                  <StatLabel color="green.600">Transacciones</StatLabel>
-                  <StatNumber color="green.700" fontSize="xl">
+                <StatTile accent="green">
+                  <StatLabel color="green.700">Transacciones</StatLabel>
+                  <StatNumber color="green.800" fontSize="xl">
                     {summary.totalTransactions}
                   </StatNumber>
-                  <StatHelpText>
-                    {summary.totalDays} días activos
-                  </StatHelpText>
-                </Stat>
+                  <StatHelpText>{summary.totalDays} días activos</StatHelpText>
+                </StatTile>
 
-                <Stat textAlign="center" p={3} bg="purple.50" borderRadius="md">
-                  <StatLabel color="purple.600">USDT Total</StatLabel>
-                  <StatNumber color="purple.700" fontSize="xl">
+                <StatTile accent="purple">
+                  <StatLabel color="purple.700">USDT total</StatLabel>
+                  <StatNumber color="purple.800" fontSize="xl">
                     {summary.totalUsdtAmount.toFixed(2)}
                   </StatNumber>
-                  <StatHelpText>
-                    Volumen total
-                  </StatHelpText>
-                </Stat>
+                  <StatHelpText>Volumen</StatHelpText>
+                </StatTile>
 
-                <Stat textAlign="center" p={3} bg="orange.50" borderRadius="md">
-                  <StatLabel color="orange.600">Proyección Mensual</StatLabel>
-                  <StatNumber color="orange.700" fontSize="xl">
-                    ${summary.projectedMonthly.toLocaleString('es-VE', { style: 'currency', currency: 'VES' })}
+                <StatTile accent="orange">
+                  <StatLabel color="orange.700">Proyección mensual</StatLabel>
+                  <StatNumber color="orange.800" fontSize="xl">
+                    {summary.projectedMonthly.toLocaleString('es-VE', { style: 'currency', currency: 'VES' })}
                   </StatNumber>
-                  <StatHelpText>
-                    Basado en promedio diario
-                  </StatHelpText>
-                </Stat>
+                  <StatHelpText>Promedio diario</StatHelpText>
+                </StatTile>
               </SimpleGrid>
             </Box>
 
@@ -221,8 +228,8 @@ export default function DailyBalance({ date, days = 7 }: DailyBalanceProps) {
             {/* Gráfico de Ganancias Diarias */}
             {chartData && chartData.length > 0 && (
               <Box w="full" h="300px" minW="300px" minH="300px">
-                <Text fontWeight="bold" mb={4} color="blue.600">
-                  📈 Ganancias Diarias
+                <Text fontWeight="bold" mb={4} color="gray.700">
+                  Ganancias diarias
                 </Text>
                 <ResponsiveContainer width="100%" height="100%" minWidth={300} minHeight={300}>
                   <LineChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
@@ -238,9 +245,9 @@ export default function DailyBalance({ date, days = 7 }: DailyBalanceProps) {
                     <Line 
                       type="monotone" 
                       dataKey="ganancia" 
-                      stroke="#3182CE" 
+                      stroke="#f59e0b"
                       strokeWidth={2}
-                      dot={{ fill: '#3182CE', strokeWidth: 2, r: 4 }}
+                      dot={{ fill: '#f59e0b', strokeWidth: 2, r: 4 }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -251,8 +258,8 @@ export default function DailyBalance({ date, days = 7 }: DailyBalanceProps) {
 
             {/* Tabla de Balance Diario */}
             <Box w="full">
-              <Text fontWeight="bold" mb={4} color="green.600">
-                📊 Detalle por Día
+              <Text fontWeight="bold" mb={4} color="gray.700">
+                Detalle por día
               </Text>
               
               <TableContainer>
@@ -271,7 +278,7 @@ export default function DailyBalance({ date, days = 7 }: DailyBalanceProps) {
                     {dailyBalances.map((balance, index) => {
                       const isDayProfitable = balance.totalNetProfit > 0
                       return (
-                        <Tr key={index} bg={isDayProfitable ? 'green.50' : 'red.50'}>
+                        <Tr key={index} bg={isDayProfitable ? 'green.50' : 'red.50'} _hover={{ bg: isDayProfitable ? 'green.100' : 'red.100' }}>
                           <Td>
                             {new Date(balance.date).toLocaleDateString('es-VE', {
                               weekday: 'short',
@@ -300,28 +307,27 @@ export default function DailyBalance({ date, days = 7 }: DailyBalanceProps) {
 
             {/* Mejor y Peor Día */}
             <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} w="full">
-              <Box p={4} bg="green.50" borderRadius="md" border="1px solid" borderColor="green.200">
+              <InsightPanel accent="green">
                 <Text fontWeight="bold" color="green.700" mb={2}>
-                  🏆 Mejor Día
+                  Mejor día
                 </Text>
-                <Text fontSize="sm" color="green.600">
-                  Ganancia: <strong>${summary.bestDay.toLocaleString('es-VE', { style: 'currency', currency: 'VES' })}</strong>
+                <Text fontSize="sm" color="green.700">
+                  {summary.bestDay.toLocaleString('es-VE', { style: 'currency', currency: 'VES' })}
                 </Text>
-              </Box>
-              
-              <Box p={4} bg="red.50" borderRadius="md" border="1px solid" borderColor="red.200">
+              </InsightPanel>
+              <InsightPanel accent="red">
                 <Text fontWeight="bold" color="red.700" mb={2}>
-                  📉 Peor Día
+                  Peor día
                 </Text>
-                <Text fontSize="sm" color="red.600">
-                  Ganancia: <strong>${summary.worstDay.toLocaleString('es-VE', { style: 'currency', currency: 'VES' })}</strong>
+                <Text fontSize="sm" color="red.700">
+                  {summary.worstDay.toLocaleString('es-VE', { style: 'currency', currency: 'VES' })}
                 </Text>
-              </Box>
+              </InsightPanel>
             </SimpleGrid>
 
             {/* Alertas y Recomendaciones */}
             {summary.averageDailyProfit < 0 && (
-              <Alert status="warning">
+              <Alert status="warning" borderRadius="xl" variant="subtle">
                 <AlertIcon />
                 <Box>
                   <AlertTitle>Pérdidas detectadas!</AlertTitle>
@@ -333,7 +339,7 @@ export default function DailyBalance({ date, days = 7 }: DailyBalanceProps) {
             )}
 
             {summary.averageDailyProfit > 0 && summary.averageROI < 5 && (
-              <Alert status="info">
+              <Alert status="info" borderRadius="xl" variant="subtle">
                 <AlertIcon />
                 <Box>
                   <AlertTitle>Margen bajo</AlertTitle>
@@ -345,7 +351,7 @@ export default function DailyBalance({ date, days = 7 }: DailyBalanceProps) {
             )}
 
             {summary.averageROI > 10 && (
-              <Alert status="success">
+              <Alert status="success" borderRadius="xl" variant="subtle">
                 <AlertIcon />
                 <Box>
                   <AlertTitle>Excelente rendimiento!</AlertTitle>

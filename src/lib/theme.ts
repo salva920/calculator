@@ -145,6 +145,30 @@ const theme = extendTheme({
         letterSpacing: '-0.02em',
       },
     },
+    Table: {
+      variants: {
+        simple: {
+          th: {
+            bg: 'surface.muted',
+            color: 'gray.600',
+            fontSize: 'xs',
+            textTransform: 'none',
+            letterSpacing: 'normal',
+            borderColor: 'surface.border',
+          },
+          td: {
+            borderColor: 'surface.border',
+          },
+        },
+      },
+    },
+    Alert: {
+      baseStyle: {
+        container: {
+          borderRadius: 'xl',
+        },
+      },
+    },
   },
 })
 

@@ -108,11 +108,21 @@ export default function TransactionSummary() {
 
   return (
     <Card>
-      <CardHeader pb={3}>
-        <HStack justify="space-between" flexWrap="wrap">
-          <Text fontSize={{ base: 'md', md: 'lg' }} fontWeight="bold">
-            Resumen de Transacciones
-          </Text>
+      <CardHeader
+        pb={3}
+        borderBottomWidth="1px"
+        borderColor="surface.border"
+        bg="surface.muted"
+      >
+        <HStack justify="space-between" flexWrap="wrap" gap={2}>
+          <Box>
+            <Text fontSize={{ base: 'md', md: 'lg' }} fontWeight="bold" color="gray.800">
+              Resumen de transacciones
+            </Text>
+            <Text fontSize="xs" color="gray.500">
+              {getFilterLabel(dateFilter)}
+            </Text>
+          </Box>
           <Select
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value as DateFilter)}
@@ -127,8 +137,14 @@ export default function TransactionSummary() {
         </HStack>
       </CardHeader>
       <CardBody pt={4}>
-        <Box p={{ base: 2, md: 3 }} bg="gray.50" borderRadius="md">
-          <SimpleGrid columns={{ base: 2, md: 4 }} spacing={{ base: 2, md: 3 }}>
+        <Box
+          p={{ base: 3, md: 4 }}
+          bg="surface.muted"
+          borderRadius="xl"
+          borderWidth="1px"
+          borderColor="surface.border"
+        >
+          <SimpleGrid columns={{ base: 2, md: 4 }} spacing={{ base: 3, md: 4 }}>
             <VStack align="start" spacing={0.5}>
               <Text fontSize="10px" color="gray.600">Transacciones</Text>
               <Text fontSize={{ base: 'sm', md: 'md' }} fontWeight="bold">

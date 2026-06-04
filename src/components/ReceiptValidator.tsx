@@ -175,8 +175,8 @@ export default function ReceiptValidator({
 
   return (
     <Card size="sm">
-      <CardHeader>
-        <Heading size="sm">Validar Comprobante</Heading>
+      <CardHeader borderBottomWidth="1px" borderColor="surface.border" bg="surface.muted" py={3}>
+        <Heading size="sm" color="gray.800">Validar comprobante</Heading>
         <Text fontSize="xs" color="gray.600" mt={1}>
           Orden: {orderNumber} • Monto esperado: {expectedAmount.toLocaleString('es-VE', {
             style: 'currency',
@@ -238,7 +238,7 @@ export default function ReceiptValidator({
           <Divider />
 
           {/* Validación manual */}
-          <Box p={4} bg="gray.50" borderRadius="md">
+          <Box p={4} bg="surface.muted" borderRadius="xl" borderWidth="1px" borderColor="surface.border">
             <Text fontWeight="bold" mb={2} fontSize="sm">
               O ingresa el monto manualmente:
             </Text>

@@ -144,16 +144,17 @@ export default function GoalsManager() {
 
   return (
     <Card>
-      <CardHeader>
-        <HStack justify="space-between">
-          <Heading size="md">Objetivos</Heading>
+      <CardHeader borderBottomWidth="1px" borderColor="surface.border" bg="surface.muted">
+        <HStack justify="space-between" flexWrap="wrap" gap={2}>
+          <Heading size="md" color="gray.800">Objetivos</Heading>
           <Button
             leftIcon={<FaPlus />}
-            colorScheme="green"
+            colorScheme="brand"
             size="sm"
+            borderRadius="full"
             onClick={onOpen}
           >
-            Nuevo Objetivo
+            Nuevo objetivo
           </Button>
         </HStack>
       </CardHeader>
@@ -178,9 +179,10 @@ export default function GoalsManager() {
                   key={goal.id}
                   p={4}
                   border="1px solid"
-                  borderColor={goal.isCompleted ? 'green.200' : 'gray.200'}
-                  borderRadius="md"
-                  bg={goal.isCompleted ? 'green.50' : 'white'}
+                  borderColor={goal.isCompleted ? 'green.200' : 'surface.border'}
+                  borderRadius="xl"
+                  bg={goal.isCompleted ? 'green.50' : 'surface.card'}
+                  boxShadow="card"
                 >
                   <HStack justify="space-between" mb={2}>
                     <HStack>
