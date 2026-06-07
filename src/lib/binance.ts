@@ -1,5 +1,11 @@
 import crypto from 'crypto'
-import axios, { AxiosInstance } from 'axios'
+import axios from 'axios'
+import { getBinanceAxiosConfig } from '@/lib/binance-http'
+import {
+  BinanceGeoRestrictedError,
+  isBinanceGeoRestrictedMessage,
+  throwIfBinanceGeoRestricted,
+} from '@/lib/binance-errors'
 
 const BINANCE_HTTP_TIMEOUT_MS = 20000
 
@@ -120,7 +126,7 @@ export class BinanceAPI {
    */
   private async getServerTime(): Promise<number> {
     try {
-      const response = await axios.get('https://api.binance.com/api/v3/time')
+      const response = await axios.get('https://api.binance.com/api/v3/time', getBinanceAxiosConfig(BINANCE_HTTP_TIMEOUT_MS))
       return response.data.serverTime
     } catch (error) {
       // Si falla, usar tiempo local
@@ -145,11 +151,11 @@ export class BinanceAPI {
       const url = `${this.baseURL}${endpoint}?${queryString}&signature=${signature}`
       
       const response = await axios.get(url, {
+        ...getBinanceAxiosConfig(BINANCE_HTTP_TIMEOUT_MS),
         headers: {
           'X-MBX-APIKEY': this.apiKey,
           'Content-Type': 'application/json',
         },
-        timeout: BINANCE_HTTP_TIMEOUT_MS,
       })
 
       return response.data
@@ -192,8 +198,8 @@ export class BinanceAPI {
       // Por ahora, implementamos una estructura que puede ser extendida
       
       const response = await axios.get('https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/portal/search', {
+        ...getBinanceAxiosConfig(BINANCE_HTTP_TIMEOUT_MS),
         params,
-        timeout: BINANCE_HTTP_TIMEOUT_MS,
       })
 
       // Esta respuesta contiene anuncios, no órdenes del usuario
@@ -249,13 +255,14 @@ export class BinanceAPI {
     const url = `https://api.binance.com/sapi/v1/c2c/orderMatch/listUserOrderHistory?${queryString}&signature=${signature}`
 
     const response = await axios.get(url, {
+      ...getBinanceAxiosConfig(BINANCE_HTTP_TIMEOUT_MS),
       headers: {
         'X-MBX-APIKEY': this.apiKey,
       },
-      timeout: BINANCE_HTTP_TIMEOUT_MS,
     })
 
     const payload = response.data
+    throwIfBinanceGeoRestricted(payload)
     const rows = Array.isArray(payload?.data) ? payload.data : []
     if (rows.length > 0) {
       return rows.map((order: any) => mapUserOrderHistoryRow(order, tradeType))
@@ -303,7 +310,15 @@ export class BinanceAPI {
     try {
       return await fetchAllPages()
     } catch (error: any) {
+      if (error instanceof BinanceGeoRestrictedError) {
+        throw error
+      }
+
       const errorData = error.response?.data
+      const errorMsg = errorData?.msg || errorData?.message || error.message
+      if (isBinanceGeoRestrictedMessage(errorMsg)) {
+        throw new BinanceGeoRestrictedError(errorMsg)
+      }
 
       if (errorData?.code === -1021) {
         console.warn('Error de sincronización de tiempo (-1021), reintentando con tiempo del servidor de Binance...')
@@ -348,10 +363,11 @@ export class BinanceAPI {
       const url = `https://api.binance.com/api/v3/account?${queryString}&signature=${signature}`
 
       const response = await axios.get(url, {
+        ...getBinanceAxiosConfig(BINANCE_HTTP_TIMEOUT_MS),
         headers: { 'X-MBX-APIKEY': this.apiKey },
-        timeout: BINANCE_HTTP_TIMEOUT_MS,
       })
 
+      throwIfBinanceGeoRestricted(response.data)
       const balances = response.data?.balances || []
       const usdt = balances.find((b: any) => (b.asset || '').toUpperCase() === 'USDT')
       if (!usdt) {
@@ -389,12 +405,13 @@ export class BinanceAPI {
 
       // Hacer la petición
       const response = await axios.get(url, {
+        ...getBinanceAxiosConfig(BINANCE_HTTP_TIMEOUT_MS),
         headers: {
           'X-MBX-APIKEY': this.apiKey,
         },
-        timeout: BINANCE_HTTP_TIMEOUT_MS,
       })
 
+      throwIfBinanceGeoRestricted(response.data)
       return response.status === 200
     } catch (error: any) {
       const code = error.response?.data?.code

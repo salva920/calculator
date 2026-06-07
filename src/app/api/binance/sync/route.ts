@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { decrypt } from '@/lib/crypto'
 import { BinanceAPI } from '@/lib/binance'
+import { BinanceGeoRestrictedError } from '@/lib/binance-errors'
 import { calculateProfits } from '@/utils/calculations'
 import { calculateBankCommission, getPaymentCommission } from '@/lib/payment-commissions'
 import { processAndSaveCycles } from '@/utils/cycle-processor'
@@ -163,18 +164,40 @@ export async function POST(request: NextRequest) {
     // Obtener órdenes de compra y venta
     let buyOrders: any[] = []
     let sellOrders: any[] = []
-    
+    let geoRestricted = false
+
     try {
       buyOrders = await binanceAPI.getUserP2PHistory('BUY', startTime, endTime)
     } catch (error: any) {
-      console.error('Error obteniendo órdenes de compra:', error)
-      // Continuar con órdenes de venta aunque falle compra
+      if (error instanceof BinanceGeoRestrictedError) {
+        geoRestricted = true
+      } else {
+        console.error('Error obteniendo órdenes de compra:', error)
+      }
     }
-    
+
     try {
       sellOrders = await binanceAPI.getUserP2PHistory('SELL', startTime, endTime)
     } catch (error: any) {
-      console.error('Error obteniendo órdenes de venta:', error)
+      if (error instanceof BinanceGeoRestrictedError) {
+        geoRestricted = true
+      } else {
+        console.error('Error obteniendo órdenes de venta:', error)
+      }
+    }
+
+    if (geoRestricted && buyOrders.length === 0 && sellOrders.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'BINANCE_GEO_RESTRICTED',
+          error:
+            'Binance bloquea las peticiones desde el servidor de Vercel (ubicación restringida). El historial de hoy no se puede traer desde la nube.',
+          hint:
+            'Opciones: (1) Abre la app en local con npm run dev desde Venezuela para sincronizar, (2) configura BINANCE_HTTP_PROXY en Vercel con un proxy en región permitida, o (3) ejecuta npm run sync:local en tu PC.',
+        },
+        { status: 503 }
+      )
     }
 
     let syncedCount = 0
@@ -397,6 +420,19 @@ export async function POST(request: NextRequest) {
       updatedTransactions,
     })
   } catch (error: any) {
+    if (error instanceof BinanceGeoRestrictedError) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'BINANCE_GEO_RESTRICTED',
+          error: error.message,
+          hint:
+            'Sincroniza desde tu PC (npm run dev o npm run sync:local) o usa BINANCE_HTTP_PROXY en Vercel.',
+        },
+        { status: 503 }
+      )
+    }
+
     console.error('Error sincronizando transacciones:', error)
     return NextResponse.json(
       {
@@ -404,7 +440,7 @@ export async function POST(request: NextRequest) {
         error: 'Error al sincronizar transacciones',
         details: error.message,
       },
-      { status: 500 }
+      { status: 503 }
     )
   }
 }

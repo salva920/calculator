@@ -61,6 +61,29 @@ Se verificó la respuesta real del endpoint oficial y se confirmó que **NO incl
 - ❌ `chat`, `messages`, `image`, `attachment`, `receipt`
 - ❌ Cualquier campo relacionado con el contenido del chat
 
+## Bloqueo geográfico en Vercel (ubicación restringida)
+
+Si en los logs de Vercel aparece:
+
+`Service unavailable from a restricted location according to 'b. Eligibility'`
+
+**No es un bug de la app.** Binance rechaza peticiones desde los servidores de Vercel (EE.UU./Europa). Las API keys están bien; el **origen de la IP** no lo está.
+
+### Qué hacer
+
+1. **Sincronizar desde tu PC (recomendado)**  
+   - `npm run dev` y deja la pestaña abierta (sync cada 2 min), o  
+   - `npm run sync:local` con el dev server corriendo.  
+   Los datos van a MongoDB y el dashboard en Vercel los muestra.
+
+2. **Proxy en Vercel**  
+   Variable `BINANCE_HTTP_PROXY` con un proxy HTTP en región permitida (ej. Venezuela).
+
+3. **Solo consultar en Vercel**  
+   Métricas e historial leen MongoDB. Sin sync reciente, “hoy” puede verse vacío.
+
+---
+
 ## Conclusión
 
 La API oficial de Binance **NO proporciona acceso a imágenes del chat** a través del endpoint `listUserOrderHistory` ni ningún otro endpoint documentado. 

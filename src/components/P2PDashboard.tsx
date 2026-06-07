@@ -146,6 +146,18 @@ export default function P2PDashboard() {
     isSyncingRef.current = true
     try {
       const response = await requestBinanceSync({ force: true })
+      if (response.code === 'BINANCE_GEO_RESTRICTED') {
+        toast({
+          title: 'Binance bloqueado en Vercel',
+          description:
+            response.hint ||
+            'Sincroniza desde tu PC con npm run dev o configura BINANCE_HTTP_PROXY en Vercel.',
+          status: 'warning',
+          duration: 12000,
+          isClosable: true,
+        })
+        return
+      }
       if (response.success) {
         if (response.skipped) {
           toast({
@@ -165,6 +177,14 @@ export default function P2PDashboard() {
           })
         }
         setTimeout(() => loadMetrics(true), 800)
+      } else if (response.error) {
+        toast({
+          title: 'Error de sincronización',
+          description: response.error,
+          status: 'error',
+          duration: 6000,
+          isClosable: true,
+        })
       }
     } catch {
       toast({

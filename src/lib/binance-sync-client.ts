@@ -7,6 +7,9 @@ export type BinanceSyncResult = {
   newTransactions?: number
   updatedTransactions?: number
   message?: string
+  code?: string
+  error?: string
+  hint?: string
 }
 
 let inFlight: Promise<BinanceSyncResult> | null = null
