@@ -7,13 +7,20 @@ const globalForPrisma = globalThis as unknown as {
 function isRetryablePrismaError(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false
   const e = error as { code?: string; message?: string; meta?: { message?: string } }
-  const msg = `${e.message || ''} ${e.meta?.message || ''}`
+  const msg = `${e.message || ''} ${e.meta?.message || ''}`.toLowerCase()
   return (
     e.code === 'P2010' ||
-    msg.includes('RetryableWriteError') ||
+    e.code === 'P1001' ||
+    e.code === 'P1002' ||
+    e.code === 'P2034' ||
+    msg.includes('retryablewriteerror') ||
+    msg.includes('server selection timeout') ||
+    msg.includes('replicasetnoprimary') ||
     msg.includes('fatal alert') ||
-    msg.includes('Connection pool') ||
-    msg.includes('I/O error')
+    msg.includes('connection pool') ||
+    msg.includes('i/o error') ||
+    msg.includes('timed out') ||
+    msg.includes('network')
   )
 }
 
@@ -22,7 +29,7 @@ function createPrismaClient() {
   return base.$extends({
     query: {
       async $allOperations({ args, query }) {
-        const maxRetries = 3
+        const maxRetries = 5
         for (let attempt = 0; attempt < maxRetries; attempt++) {
           try {
             return await query(args)
@@ -30,7 +37,7 @@ function createPrismaClient() {
             if (!isRetryablePrismaError(error) || attempt === maxRetries - 1) {
               throw error
             }
-            await new Promise((resolve) => setTimeout(resolve, 150 * 2 ** attempt))
+            await new Promise((resolve) => setTimeout(resolve, 400 * 2 ** attempt))
           }
         }
         throw new Error('Prisma retry agotado')

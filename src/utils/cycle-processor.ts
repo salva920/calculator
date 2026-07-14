@@ -1,6 +1,11 @@
 import { prisma } from '@/lib/prisma'
 
 const MIN_CYCLE_USDT = 0.01 // mínimo para considerar un ciclo (evitar polvo)
+const CYCLE_CREATE_BATCH_SIZE = 20
+const CYCLE_PROCESS_MIN_GAP_MS = 5 * 60 * 1000
+
+let lastCycleProcessAt = 0
+let cycleProcessInFlight = false
 
 // Función para procesar y guardar ciclos con detalles completos. Cada ciclo = cantidad real vendida y comprada emparejada (no 100 fijo).
 // Optimizada: carga ciclos existentes una vez y verifica en memoria, hace batch inserts.
@@ -9,6 +14,14 @@ export async function processAndSaveCycles(
   _today: Date,
   _todayEnd: Date
 ) {
+  const now = Date.now()
+  if (cycleProcessInFlight || now - lastCycleProcessAt < CYCLE_PROCESS_MIN_GAP_MS) {
+    return
+  }
+
+  cycleProcessInFlight = true
+  lastCycleProcessAt = now
+
   try {
     // Cargar transacciones y ciclos existentes en paralelo
     const [transactions, existingCycles] = await Promise.all([
@@ -165,29 +178,40 @@ export async function processAndSaveCycles(
     // Insertar todos los ciclos nuevos (MongoDB no soporta skipDuplicates en createMany)
     // Usar Promise.allSettled para que si algunos fallan por duplicados, los demás continúen
     if (cyclesToCreate.length > 0) {
-      const results = await Promise.allSettled(
-        cyclesToCreate.map((cycleData) =>
-          prisma.p2PCycle.create({
-            data: cycleData,
-          })
+      let failedCreates = 0
+
+      for (let i = 0; i < cyclesToCreate.length; i += CYCLE_CREATE_BATCH_SIZE) {
+        const batch = cyclesToCreate.slice(i, i + CYCLE_CREATE_BATCH_SIZE)
+        const results = await Promise.allSettled(
+          batch.map((cycleData) =>
+            prisma.p2PCycle.create({
+              data: cycleData,
+            })
+          )
         )
-      )
-      
-      // Contar errores (ignorar duplicados silenciosamente)
-      const errors = results.filter((r) => r.status === 'rejected')
-      if (errors.length > 0) {
+
+        const errors = results.filter((r) => r.status === 'rejected')
         const nonDuplicateErrors = errors.filter((r) => {
           const error = r.status === 'rejected' ? r.reason : null
-          // Ignorar errores de duplicados (MongoDB puede tener diferentes formatos)
-          return error && !error.message?.toLowerCase().includes('duplicate') && error.code !== 11000
+          const message = `${error?.message || ''} ${error?.meta?.message || ''}`.toLowerCase()
+          return (
+            error &&
+            !message.includes('duplicate') &&
+            error.code !== 11000 &&
+            error.code !== 'P2002'
+          )
         })
-        if (nonDuplicateErrors.length > 0) {
-          console.warn(`Algunos ciclos no se pudieron crear:`, nonDuplicateErrors.length)
-        }
+        failedCreates += nonDuplicateErrors.length
+      }
+
+      if (failedCreates > 0) {
+        console.warn(`Algunos ciclos no se pudieron crear: ${failedCreates}`)
       }
     }
   } catch (error) {
     console.error('Error procesando y guardando ciclos:', error)
-    throw error // Re-lanzar para que el caller pueda manejarlo
+    throw error
+  } finally {
+    cycleProcessInFlight = false
   }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import {
   COOKIE_NAME,
+  getProductionMisconfiguration,
   isAccessProtectionEnabled,
   verifySessionToken,
 } from '@/lib/access-auth'
@@ -18,10 +19,6 @@ function isPublicPath(pathname: string): boolean {
 }
 
 export async function middleware(request: NextRequest) {
-  if (!isAccessProtectionEnabled()) {
-    return NextResponse.next()
-  }
-
   const { pathname } = request.nextUrl
 
   if (
@@ -30,6 +27,18 @@ export async function middleware(request: NextRequest) {
     pathname.endsWith('.png') ||
     pathname.endsWith('.ico')
   ) {
+    return NextResponse.next()
+  }
+
+  const configError = getProductionMisconfiguration()
+  if (configError) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: configError }, { status: 503 })
+    }
+    return new NextResponse(configError, { status: 503 })
+  }
+
+  if (!isAccessProtectionEnabled()) {
     return NextResponse.next()
   }
 

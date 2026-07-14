@@ -5,36 +5,70 @@ export const maxDuration = 30
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { extractAmountFromImage } from '@/lib/receipt-ocr'
-import { fileToDataUrl } from '@/lib/store-upload-image'
+import { fileToDataUrl } from '@/lib/store-upload-image-server'
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const transactionId = formData.get('transactionId') as string
-    const file = formData.get('file') as File
+    const file = formData.get('file') as File | null
+    const manualAmountRaw = formData.get('manualAmount')
 
-    if (!transactionId || !file) {
+    if (!transactionId) {
       return NextResponse.json(
-        {
-          success: false,
-          error: 'ID de transacción y archivo son requeridos',
-        },
+        { success: false, error: 'ID de transacción es requerido' },
         { status: 400 }
       )
     }
 
-    // Verificar que la transacción existe
     const transaction = await prisma.binanceP2PTransaction.findUnique({
       where: { id: transactionId },
     })
 
     if (!transaction) {
       return NextResponse.json(
-        {
-          success: false,
-          error: 'Transacción no encontrada',
-        },
+        { success: false, error: 'Transacción no encontrada' },
         { status: 404 }
+      )
+    }
+
+    const expectedAmount = transaction.fiatAmount
+
+    if (manualAmountRaw != null && manualAmountRaw !== '') {
+      const extractedAmount = parseFloat(String(manualAmountRaw))
+      if (!Number.isFinite(extractedAmount)) {
+        return NextResponse.json(
+          { success: false, error: 'Monto manual inválido' },
+          { status: 400 }
+        )
+      }
+
+      const isValid = Math.abs(extractedAmount - expectedAmount) < 1.0
+      const validation = await prisma.receiptValidation.create({
+        data: {
+          transactionId,
+          imageUrl: '',
+          extractedAmount,
+          expectedAmount,
+          isValid,
+          confidence: 1.0,
+          ocrText: `Monto ingresado manualmente: ${extractedAmount}`,
+        },
+      })
+
+      return NextResponse.json({
+        success: true,
+        validation,
+        message: isValid
+          ? 'Comprobante válido: El monto coincide con la orden'
+          : `Comprobante inválido: Monto ingresado (${extractedAmount.toFixed(2)}) no coincide con el esperado (${expectedAmount.toFixed(2)})`,
+      })
+    }
+
+    if (!file) {
+      return NextResponse.json(
+        { success: false, error: 'Archivo o monto manual requerido' },
+        { status: 400 }
       )
     }
 
@@ -46,9 +80,8 @@ export async function POST(request: NextRequest) {
     // Por ahora, usaremos una aproximación simple
     // En producción, deberías usar un servicio de OCR real
     const extractedAmount = await extractAmountFromImage(buffer)
-    const expectedAmount = transaction.fiatAmount
-    const isValid = extractedAmount !== null && 
-                   Math.abs(extractedAmount - expectedAmount) < 1.0 // Tolerancia de 1 VES
+    const isValid =
+      extractedAmount !== null && Math.abs(extractedAmount - expectedAmount) < 1.0
     const confidence = extractedAmount !== null ? 0.85 : 0 // Simulado
 
     // Guardar validación

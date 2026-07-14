@@ -5,16 +5,31 @@ import {
   cookieOptions,
   createSessionToken,
   getAccessPassword,
+  getProductionMisconfiguration,
   isAccessProtectionEnabled,
   verifyAccessPassword,
 } from '@/lib/access-auth'
+import { getClientIp, isRateLimited } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
+  const configError = getProductionMisconfiguration()
+  if (configError) {
+    return NextResponse.json({ error: configError }, { status: 503 })
+  }
+
   if (!isAccessProtectionEnabled()) {
     return NextResponse.json({ ok: true, protection: false })
+  }
+
+  const ip = getClientIp(request)
+  if (isRateLimited(`login:${ip}`)) {
+    return NextResponse.json(
+      { error: 'Demasiados intentos. Espera unos minutos.' },
+      { status: 429 }
+    )
   }
 
   let body: { password?: string }

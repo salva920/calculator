@@ -4,8 +4,8 @@ export const maxDuration = 30
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { fileToDataUrl } from '@/lib/store-upload-image-server'
 import {
-  fileToDataUrl,
   getLegacyKycImageFields,
   sanitizeKycImagesForClient,
 } from '@/lib/store-upload-image'

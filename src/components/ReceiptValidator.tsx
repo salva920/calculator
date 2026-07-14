@@ -23,6 +23,7 @@ import {
 } from '@chakra-ui/react'
 import { FaUpload, FaCheckCircle, FaTimesCircle } from 'react-icons/fa'
 import axios from 'axios'
+import { compressImageFile } from '@/lib/compress-image-client'
 
 interface ReceiptValidation {
   id: string
@@ -71,16 +72,27 @@ export default function ReceiptValidator({
     }
   }
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
-    if (selectedFile) {
-      setFile(selectedFile)
-      // Crear preview
+    if (!selectedFile) return
+
+    try {
+      const compressed = await compressImageFile(selectedFile)
+      setFile(compressed)
+
       const reader = new FileReader()
       reader.onloadend = () => {
         setPreview(reader.result as string)
       }
-      reader.readAsDataURL(selectedFile)
+      reader.readAsDataURL(compressed)
+    } catch (error: any) {
+      toast({
+        title: 'Error con la imagen',
+        description: error.message || 'No se pudo procesar la imagen',
+        status: 'error',
+        duration: 4500,
+        isClosable: true,
+      })
     }
   }
 
@@ -123,7 +135,10 @@ export default function ReceiptValidator({
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.response?.data?.error || 'No se pudo validar el comprobante',
+        description:
+          error.response?.data?.details ||
+          error.response?.data?.error ||
+          'No se pudo validar el comprobante',
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -133,7 +148,7 @@ export default function ReceiptValidator({
     }
   }
 
-  const handleManualValidation = () => {
+  const handleManualValidation = async () => {
     const amount = parseFloat(manualAmount)
     if (isNaN(amount)) {
       toast({
@@ -146,29 +161,40 @@ export default function ReceiptValidator({
       return
     }
 
-    const isValid = Math.abs(amount - expectedAmount) < 1.0
-    const validation: ReceiptValidation = {
-      id: `manual-${Date.now()}`,
-      imageUrl: preview || '',
-      extractedAmount: amount,
-      expectedAmount,
-      isValid,
-      confidence: 1.0,
-      ocrText: `Monto ingresado manualmente: ${amount}`,
-      validatedAt: new Date().toISOString(),
-    }
+    setIsUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('transactionId', transactionId)
+      formData.append('manualAmount', String(amount))
 
-    setValidations([validation, ...validations])
-    toast({
-      title: isValid ? 'Monto Correcto' : 'Monto Incorrecto',
-      description: isValid
-        ? 'El monto coincide con la orden'
-        : `El monto (${amount.toFixed(2)}) no coincide con el esperado (${expectedAmount.toFixed(2)})`,
-      status: isValid ? 'success' : 'warning',
-      duration: 5000,
-      isClosable: true,
-    })
-    setManualAmount('')
+      const response = await axios.post('/api/transactions/validate-receipt', formData)
+
+      if (response.data.success) {
+        const validation = response.data.validation
+        toast({
+          title: validation.isValid ? 'Monto Correcto' : 'Monto Incorrecto',
+          description: response.data.message,
+          status: validation.isValid ? 'success' : 'warning',
+          duration: 5000,
+          isClosable: true,
+        })
+        setManualAmount('')
+        await loadValidations()
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description:
+          error.response?.data?.details ||
+          error.response?.data?.error ||
+          'No se pudo guardar la validación',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   const latestValidation = validations[0]
@@ -257,6 +283,7 @@ export default function ReceiptValidator({
               <Button
                 colorScheme="blue"
                 onClick={handleManualValidation}
+                isLoading={isUploading}
                 leftIcon={<FaCheckCircle />}
               >
                 Validar

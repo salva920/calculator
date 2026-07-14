@@ -1,6 +1,6 @@
 const metricsCache = new Map<string, { data: unknown; timestamp: number }>()
 
-export const METRICS_CACHE_TTL_MS = 10_000
+export const METRICS_CACHE_TTL_MS = 20_000
 
 export function getMetricsCacheEntry(key: string) {
   return metricsCache.get(key)

@@ -1,7 +1,13 @@
+import { getProductionConfigError, isProduction } from '@/lib/env'
+
 const COOKIE_NAME = 'p2p_access'
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000 // 30 días
 
 export { COOKIE_NAME, SESSION_MAX_AGE_MS }
+
+export function getProductionMisconfiguration(): string | null {
+  return getProductionConfigError()
+}
 
 export function getAccessPassword(): string | null {
   const p = process.env.APP_ACCESS_PASSWORD?.trim()
@@ -9,6 +15,9 @@ export function getAccessPassword(): string | null {
 }
 
 export function isAccessProtectionEnabled(): boolean {
+  if (isProduction()) {
+    return getAccessPassword() !== null
+  }
   return getAccessPassword() !== null
 }
 
@@ -17,7 +26,11 @@ function getSigningSecret(): string {
     process.env.ENCRYPTION_KEY?.trim() ||
     process.env.APP_ACCESS_PASSWORD?.trim() ||
     ''
-  return key || 'p2p-access-fallback-dev-only'
+  if (key) return key
+  if (isProduction()) {
+    throw new Error('Configuración de sesión incompleta en producción')
+  }
+  return 'p2p-access-fallback-dev-only'
 }
 
 async function hmacHex(message: string, secret: string): Promise<string> {

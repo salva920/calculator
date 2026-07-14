@@ -17,6 +17,7 @@ import {
 } from '@chakra-ui/react'
 import { FaSave, FaUpload } from 'react-icons/fa'
 import axios from 'axios'
+import { compressImageFile } from '@/lib/compress-image-client'
 import { isInlineImageRef } from '@/lib/store-upload-image'
 
 interface SellKycFormProps {
@@ -96,19 +97,41 @@ export default function SellKycForm({ transactionId, orderNumber }: SellKycFormP
     }
   }
 
-  const handleFileSelect = (field: KycImageField, file: File | null) => {
-    setFiles((prev) => ({ ...prev, [field]: file }))
-
+  const handleFileSelect = async (field: KycImageField, file: File | null) => {
     if (!file) {
+      setFiles((prev) => ({ ...prev, [field]: null }))
       setPreviews((prev) => ({ ...prev, [field]: null }))
       return
     }
 
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setPreviews((prev) => ({ ...prev, [field]: reader.result as string }))
+    try {
+      const compressed = await compressImageFile(file)
+      setFiles((prev) => ({ ...prev, [field]: compressed }))
+
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setPreviews((prev) => ({ ...prev, [field]: reader.result as string }))
+      }
+      reader.readAsDataURL(compressed)
+
+      if (compressed.size < file.size) {
+        toast({
+          title: 'Imagen optimizada',
+          description: `Se redujo de ${(file.size / 1024 / 1024).toFixed(1)} MB a ${(compressed.size / 1024 / 1024).toFixed(1)} MB`,
+          status: 'info',
+          duration: 3000,
+          isClosable: true,
+        })
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error con la imagen',
+        description: error.message || 'No se pudo procesar la imagen',
+        status: 'error',
+        duration: 4500,
+        isClosable: true,
+      })
     }
-    reader.readAsDataURL(file)
   }
 
   const handleSave = async () => {
@@ -179,7 +202,10 @@ export default function SellKycForm({ transactionId, orderNumber }: SellKycFormP
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.response?.data?.error || 'No se pudo guardar el KYC',
+        description:
+          error.response?.data?.details ||
+          error.response?.data?.error ||
+          'No se pudo guardar el KYC',
         status: 'error',
         duration: 4500,
         isClosable: true,

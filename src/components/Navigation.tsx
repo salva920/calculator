@@ -26,10 +26,12 @@ import { usePathname } from 'next/navigation'
 import {
   FaBitcoin,
   FaBars,
+  FaBullseye,
   FaCalculator,
   FaChartLine,
   FaExternalLinkAlt,
   FaLink,
+  FaSyncAlt,
   FaUsers,
   FaWallet,
   FaSignOutAlt,
@@ -39,6 +41,8 @@ const NAV_LINKS = [
   { href: '/', label: 'Resumen', icon: FaChartLine },
   { href: '/calculadora', label: 'Calculadora', icon: FaCalculator },
   { href: '/balance-diario', label: 'Balance', icon: FaWallet },
+  { href: '/operativa', label: 'Operativa', icon: FaSyncAlt },
+  { href: '/objetivos', label: 'Objetivos', icon: FaBullseye },
   { href: '/conexion-binance', label: 'Binance', icon: FaLink },
   { href: '/socios-capital', label: 'Socios', icon: FaUsers },
 ] as const

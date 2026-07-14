@@ -5,7 +5,7 @@ export const BINANCE_SYNC_INTERVAL_MS = 120_000
 export const BINANCE_SYNC_SERVER_MIN_GAP_MS = 90_000
 
 /** Poll de métricas/transacciones: solo MongoDB, no Binance. */
-export const UI_POLL_DATABASE_MS = 10_000
+export const UI_POLL_DATABASE_MS = 20_000
 
 /** Precio USDT en calculadora (API pública spot, no P2P firmada). */
 export const BINANCE_PRICE_REFETCH_MS = 60_000

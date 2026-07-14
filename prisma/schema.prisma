@@ -125,6 +125,10 @@ model BinanceP2PTransaction {
   receiptValidations ReceiptValidation[] // Validaciones de comprobantes
   sellKyc            SellTransactionKyc?
 
+  @@index([createTime])
+  @@index([orderStatus])
+  @@index([tradeType, createTime])
+  @@index([completedAt])
   @@map("binance_p2p_transactions")
 }
 

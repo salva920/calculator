@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Box,
   Card,
@@ -35,9 +35,11 @@ import {
   Flex,
 } from '@chakra-ui/react'
 import { FaAddressCard, FaCheckCircle } from 'react-icons/fa'
-import axios from 'axios'
 import { requestBinanceSync } from '@/lib/binance-sync-client'
-import { UI_POLL_DATABASE_MS } from '@/lib/sync-constants'
+import {
+  useBinanceTransactions,
+  useInvalidateBinanceTransactions,
+} from '@/hooks/useBinanceTransactions'
 import ReceiptValidator from './ReceiptValidator'
 import SellKycForm from './SellKycForm'
 
@@ -222,17 +224,35 @@ function TransactionMobileCard({ tx }: { tx: BinanceTransaction }) {
 }
 
 export default function SyncedTransactions() {
-  const [transactions, setTransactions] = useState<BinanceTransaction[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [dateFilter, setDateFilter] = useState<DateFilter>('today')
   const [bankFilter, setBankFilter] = useState('')
   const [startDateFilter, setStartDateFilter] = useState('')
   const [endDateFilter, setEndDateFilter] = useState('')
   const toast = useToast()
+  const invalidateTransactions = useInvalidateBinanceTransactions()
+
+  const queryParams = useMemo(() => {
+    const params: Record<string, string> = {}
+    const hasManualDateRange = Boolean(startDateFilter || endDateFilter)
+    if (hasManualDateRange) {
+      if (startDateFilter) {
+        params.startDate = new Date(`${startDateFilter}T00:00:00.000-04:00`).toISOString()
+      }
+      if (endDateFilter) {
+        params.endDate = new Date(`${endDateFilter}T23:59:59.999-04:00`).toISOString()
+      }
+    } else if (dateFilter !== 'all') {
+      params.period = dateFilter
+    }
+    if (bankFilter.trim()) {
+      params.bankName = bankFilter.trim()
+    }
+    return params
+  }, [dateFilter, bankFilter, startDateFilter, endDateFilter])
+
+  const { data: transactions = [], isLoading } = useBinanceTransactions(queryParams)
 
   useEffect(() => {
-    loadTransactions()
-
     if (dateFilter === 'yesterday') {
       const ymd = getYesterdayYmd()
       const key = `p2p-backfill-${ymd}`
@@ -243,19 +263,15 @@ export default function SyncedTransactions() {
       }
     }
 
-    const interval = setInterval(loadTransactions, UI_POLL_DATABASE_MS)
-    
-    // Escuchar eventos de sincronización
     const handleSync = () => {
-      setTimeout(loadTransactions, 1000) // Esperar 1 segundo para que se procesen las transacciones
+      setTimeout(() => invalidateTransactions(), 1000)
     }
     window.addEventListener('binance-sync-completed', handleSync)
-    
+
     return () => {
-      clearInterval(interval)
       window.removeEventListener('binance-sync-completed', handleSync)
     }
-  }, [dateFilter, bankFilter, startDateFilter, endDateFilter])
+  }, [dateFilter, invalidateTransactions])
 
   const completedSells = transactions.filter(
     (t) => t.tradeType === 'SELL' && (t.orderStatus || '').toUpperCase() === 'COMPLETED'
@@ -263,38 +279,6 @@ export default function SyncedTransactions() {
   const sellTotalUsdt = completedSells.reduce((s, t) => s + t.amount, 0)
   const sellTotalBs = completedSells.reduce((s, t) => s + t.fiatAmount, 0)
   const showDaySummary = dateFilter !== 'all' || Boolean(startDateFilter || endDateFilter)
-
-  const loadTransactions = async () => {
-    try {
-      const params: Record<string, string> = {}
-
-      const hasManualDateRange = Boolean(startDateFilter || endDateFilter)
-      if (hasManualDateRange) {
-        if (startDateFilter) {
-          params.startDate = new Date(`${startDateFilter}T00:00:00.000-04:00`).toISOString()
-        }
-        if (endDateFilter) {
-          params.endDate = new Date(`${endDateFilter}T23:59:59.999-04:00`).toISOString()
-        }
-      } else if (dateFilter !== 'all') {
-        // El servidor calcula "hoy" en America/Caracas (evita desfase UTC en el navegador)
-        params.period = dateFilter
-      }
-
-      if (bankFilter.trim()) {
-        params.bankName = bankFilter.trim()
-      }
-      
-      const response = await axios.get('/api/binance/transactions', { params })
-      if (response.data.success) {
-        setTransactions(response.data.transactions)
-      }
-    } catch (error) {
-      console.error('Error cargando transacciones:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   return (
     <Card overflow="hidden" w="full" maxW="100%">

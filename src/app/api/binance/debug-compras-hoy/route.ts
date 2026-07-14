@@ -3,18 +3,17 @@ export const runtime = 'nodejs'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getTodayBoundsCaracas } from '@/utils/caracas-date'
+import { isProduction } from '@/lib/env'
 
 /**
  * GET /api/binance/debug-compras-hoy
- *
- * Prueba de diagnóstico: aplica la misma lógica que las métricas para
- * "compras hoy" y devuelve el desglose (fechas, transacciones, totales por estado).
- * Útil para ver por qué el total de compras no se actualiza.
- *
- * Uso: abre en el navegador http://localhost:3000/api/binance/debug-compras-hoy
- *      o: curl http://localhost:3000/api/binance/debug-compras-hoy
+ * Solo disponible fuera de producción.
  */
 export async function GET() {
+  if (isProduction()) {
+    return NextResponse.json({ success: false, error: 'No disponible en producción' }, { status: 404 })
+  }
+
   try {
     const { start: todayStart, end: todayEnd } = getTodayBoundsCaracas()
 

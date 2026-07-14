@@ -28,83 +28,15 @@ import {
   IconButton,
   Tooltip,
 } from '@chakra-ui/react'
-import { FaChartLine, FaDollarSign, FaShoppingCart, FaArrowUp, FaArrowDown, FaSync } from 'react-icons/fa'
+import { FaArrowUp, FaArrowDown, FaSync } from 'react-icons/fa'
 import axios from 'axios'
 import { requestBinanceSync } from '@/lib/binance-sync-client'
-import { UI_POLL_DATABASE_MS } from '@/lib/sync-constants'
+import { useBinanceMetrics, useRefreshBinanceMetrics } from '@/hooks/useBinanceMetrics'
 import InsightPanel from '@/components/ui/InsightPanel'
 
-interface DashboardMetrics {
-  totalProfit: number
-  totalProfitToday: number
-  totalTransactions: number
-  completedTransactions: number
-  pendingBuy: number
-  pendingSell: number
-  totalBuyAmount: number
-  totalSellAmount: number
-  totalBuyValue: number
-  totalSellValue: number
-  averageBuyPrice: number
-  averageSellPrice: number
-  profitMargin: number
-  roi: number
-  totalVolume: number
-  completedCycles: number
-  pendingToBuy: number
-  pendingToSell: number
-  // Métricas de HOY
-  todayBuyAmount: number
-  todaySellAmount: number
-  todayBuyValue: number
-  todaySellValue: number
-  todayPendingBuyAmount: number
-  todayPendingSellAmount: number
-  todayTransactionsCount: number
-  todayCompletedCount: number
-  todayVolume: number
-  todayCompletedCycles: number
-  cycleSizeUsdt?: number
-  todayCyclesVolumeUsdt?: number
-  todayCyclesVolumeBs?: number
-  todayCyclesSummary?: {
-    cycles: { cycleNumber: number; sellUsdtAmount: number; buyUsdtAmount: number; netProfit: number; cumulativeProfit: number }[]
-    totalProfitFromCycles: number
-  }
-  currentCycleSoldUsdt?: number
-  currentCycleBoughtUsdt?: number
-  remainingToSellUsdt?: number
-  remainingToBuyUsdt?: number
-  remainingToSellBs?: number
-  remainingToBuyBs?: number
-  manualBuyEquivalent?: number
-  manualSellEquivalent?: number
-  adjustedTotalBuyAmount?: number
-  adjustedTotalSellAmount?: number
-  manualNetUsdt?: number
-  closedCyclesProfitTotal?: number
-  lastClosedCycleProfit?: number
-  manualAdjustments?: {
-    id: string
-    type: 'BUY_EXTERNAL' | 'SELL_EXTERNAL' | 'SETTLEMENT'
-    usdtAmount: number
-    note: string | null
-    createdAt: string
-  }[]
-  // Métricas de brecha y estimaciones
-  latestBuyPrice: number
-  latestSellPrice: number
-  currentGap: number
-  currentGapPercent: number
-  estimatedProfitPerUsdt: number
-  estimatedROI: number
-  buyPriceTrend: 'increasing' | 'decreasing' | 'stable'
-  isGapTooSmall: boolean
-}
-
 export default function P2PDashboard() {
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const { data: metrics, isLoading } = useBinanceMetrics()
+  const refreshMetrics = useRefreshBinanceMetrics()
   const [isSyncing, setIsSyncing] = useState(false)
   const [isSavingAdjustment, setIsSavingAdjustment] = useState(false)
   const [showManualAdjustments, setShowManualAdjustments] = useState(false)
@@ -115,31 +47,12 @@ export default function P2PDashboard() {
   const toast = useToast()
 
   useEffect(() => {
-    loadMetrics(true)
-    const interval = setInterval(() => loadMetrics(false), UI_POLL_DATABASE_MS)
     const handleSync = () => {
-      setTimeout(() => loadMetrics(true), 1000)
+      setTimeout(() => void refreshMetrics(true), 1000)
     }
     window.addEventListener('binance-sync-completed', handleSync)
-    return () => {
-      clearInterval(interval)
-      window.removeEventListener('binance-sync-completed', handleSync)
-    }
-  }, [])
-
-  const loadMetrics = async (forceRefresh = false) => {
-    try {
-      const url = forceRefresh ? '/api/binance/metrics?refresh=1' : '/api/binance/metrics'
-      const response = await axios.get(url)
-      if (response.data.success) {
-        setMetrics(response.data.metrics)
-      }
-    } catch (error) {
-      console.error('Error cargando métricas:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+    return () => window.removeEventListener('binance-sync-completed', handleSync)
+  }, [refreshMetrics])
 
   const handleSync = async () => {
     setIsSyncing(true)
@@ -176,7 +89,7 @@ export default function P2PDashboard() {
             isClosable: true,
           })
         }
-        setTimeout(() => loadMetrics(true), 800)
+        setTimeout(() => void refreshMetrics(true), 800)
       } else if (response.error) {
         toast({
           title: 'Error de sincronización',
@@ -231,7 +144,7 @@ export default function P2PDashboard() {
         })
         setAdjustmentAmount('')
         setAdjustmentNote('')
-        loadMetrics(true)
+        await refreshMetrics(true)
       }
     } catch (error: any) {
       toast({
@@ -250,7 +163,7 @@ export default function P2PDashboard() {
     try {
       const response = await axios.delete('/api/manual-adjustments', { params: { id } })
       if (response.data?.success) {
-        loadMetrics(true)
+        await refreshMetrics(true)
       }
     } catch (error: any) {
       toast({
