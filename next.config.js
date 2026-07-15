@@ -3,13 +3,14 @@ const nextConfig = {
   images: {
     domains: ['localhost', 'api.binance.com'],
   },
-  webpack: (config, { isServer }) => {
-    // Configurar para manejar archivos .mjs correctamente
+  // Evita que el file tracer de Next recorra el árbol nativo de sharp (stack overflow en Vercel)
+  serverExternalPackages: ['sharp', 'tesseract.js'],
+  webpack: (config) => {
     config.resolve.extensionAlias = {
       '.js': ['.js', '.ts', '.tsx'],
       '.mjs': ['.mjs', '.js'],
-    };
-    return config;
+    }
+    return config
   },
 }
 
