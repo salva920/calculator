@@ -95,8 +95,11 @@ function avgCommissionPercent(items: TxSlice[], field: 'commission' | 'bankCommi
   )
 }
 
-async function runInBatches<T>(tasks: Array<() => Promise<T>>, batchSize = 4): Promise<T[]> {
-  const results: T[] = []
+async function runInBatches(
+  tasks: Array<() => Promise<unknown>>,
+  batchSize = 4
+): Promise<unknown[]> {
+  const results: unknown[] = []
   for (let i = 0; i < tasks.length; i += batchSize) {
     const batch = tasks.slice(i, i + batchSize)
     const batchResults = await Promise.all(batch.map((task) => task()))
@@ -128,23 +131,7 @@ export async function computeDashboardMetrics(
     orderStatus: { in: ['TRADING', 'BUYER_PAYED', 'APPEALING', 'PARTIAL_COMPLETED'] },
   }
 
-  const [
-    buyAgg,
-    sellAgg,
-    pendingBuyAgg,
-    pendingSellAgg,
-    totalTransactions,
-    completedTransactions,
-    recentPeriodBuys,
-    recentPeriodSells,
-    todayTransactions,
-    completedForCarry,
-    manualAdjustments,
-    totalCompletedCycles,
-    closedCyclesProfitAgg,
-    lastClosedCycle,
-    todayCyclesRaw,
-  ] = await runInBatches([
+  const batchResults = await runInBatches([
     () =>
       prisma.binanceP2PTransaction.aggregate({
         where: { ...completedWhere, tradeType: 'BUY' },
@@ -257,6 +244,40 @@ export async function computeDashboardMetrics(
       }),
   ])
 
+  const buyAgg = batchResults[0] as {
+    _sum: { amount: number | null; fiatAmount: number | null; commission: number | null }
+    _count: number
+  }
+  const sellAgg = batchResults[1] as {
+    _sum: { amount: number | null; fiatAmount: number | null; commission: number | null }
+    _count: number
+  }
+  const pendingBuyAgg = batchResults[2] as { _sum: { amount: number | null } }
+  const pendingSellAgg = batchResults[3] as { _sum: { amount: number | null } }
+  const totalTransactions = batchResults[4] as number
+  const completedTransactions = batchResults[5] as number
+  const recentPeriodBuys = batchResults[6] as TxSlice[]
+  const recentPeriodSells = batchResults[7] as TxSlice[]
+  const todayTransactions = batchResults[8] as TxSlice[]
+  const completedForCarry = batchResults[9] as Array<{
+    tradeType: string
+    amount: number
+    createTime: Date
+  }>
+  const manualAdjustments = batchResults[10] as ManualAdjustmentRecord[]
+  const totalCompletedCycles = batchResults[11] as number
+  const closedCyclesProfitAgg = batchResults[12] as { _sum: { netProfit: number | null } }
+  const lastClosedCycle = batchResults[13] as { netProfit: number | null } | null
+  const todayCyclesRaw = batchResults[14] as Array<{
+    date: Date
+    usdtAmount: number
+    sellUsdtAmount: number
+    buyUsdtAmount: number
+    sellFiatAmount: number
+    completedAt: Date
+    netProfit: number | null
+  }>
+
   const totalBuyAmount = buyAgg._sum.amount ?? 0
   const totalSellAmount = sellAgg._sum.amount ?? 0
   const totalBuyValue = buyAgg._sum.fiatAmount ?? 0
@@ -264,7 +285,7 @@ export async function computeDashboardMetrics(
   const pendingBuyAmount = pendingBuyAgg._sum.amount ?? 0
   const pendingSellAmount = pendingSellAgg._sum.amount ?? 0
 
-  const todayTx = todayTransactions as TxSlice[]
+  const todayTx = todayTransactions
   const todayCompletedBuys = todayTx.filter(
     (tx) => tx.tradeType === 'BUY' && isCompletedInWindow(tx, today, todayEnd)
   )
@@ -322,14 +343,8 @@ export async function computeDashboardMetrics(
       : 0
   const profitMargin = totalSellValue > 0 ? (netProfit / totalSellValue) * 100 : 0
 
-  const recentBuys = pickRecentCompleted(
-    todayCompletedBuys,
-    recentPeriodBuys as TxSlice[]
-  )
-  const recentSells = pickRecentCompleted(
-    todayCompletedSells,
-    recentPeriodSells as TxSlice[]
-  )
+  const recentBuys = pickRecentCompleted(todayCompletedBuys, recentPeriodBuys)
+  const recentSells = pickRecentCompleted(todayCompletedSells, recentPeriodSells)
 
   const latestBuyPrice = recentBuys[0]?.unitPrice ?? averageBuyPrice
   const latestSellPrice = recentSells[0]?.unitPrice ?? averageSellPrice
@@ -348,9 +363,9 @@ export async function computeDashboardMetrics(
   const currentGapPercent = latestBuyPrice > 0 ? (currentGap / latestBuyPrice) * 100 : 0
 
   const avgBinanceCommissionPercent =
-    buyAgg._count > 0 ? avgCommissionPercent(recentPeriodBuys as TxSlice[], 'commission') : 0.1
+    buyAgg._count > 0 ? avgCommissionPercent(recentPeriodBuys, 'commission') : 0.1
   const avgBankCommissionPercent =
-    buyAgg._count > 0 ? avgCommissionPercent(recentPeriodBuys as TxSlice[], 'bankCommission') : 0.3
+    buyAgg._count > 0 ? avgCommissionPercent(recentPeriodBuys, 'bankCommission') : 0.3
 
   const recentBuyCommissions =
     recentBuys.length > 0

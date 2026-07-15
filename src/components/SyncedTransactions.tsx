@@ -18,7 +18,6 @@ import {
   Th,
   Td,
   TableContainer,
-  useToast,
   Button,
   IconButton,
   Popover,
@@ -39,6 +38,7 @@ import { requestBinanceSync } from '@/lib/binance-sync-client'
 import {
   useBinanceTransactions,
   useInvalidateBinanceTransactions,
+  type BinanceTransaction,
 } from '@/hooks/useBinanceTransactions'
 import ReceiptValidator from './ReceiptValidator'
 import SellKycForm from './SellKycForm'
@@ -61,27 +61,6 @@ function getYesterdayYmd(): string {
     month: '2-digit',
     day: '2-digit',
   }).format(yesterday)
-}
-
-interface BinanceTransaction {
-  id: string
-  binanceOrderId: string
-  orderNumber: string
-  tradeType: 'BUY' | 'SELL'
-  asset: string
-  fiat: string
-  fiatAmount: number
-  amount: number
-  unitPrice: number
-  orderStatus: string
-  createTime: string
-  commission: number
-  counterPartName: string
-  paymentMethod: string
-  isSynced: boolean
-  sellKyc?: {
-    bankName: string | null
-  } | null
 }
 
 function formatTxDate(createTime: string) {
@@ -228,7 +207,6 @@ export default function SyncedTransactions() {
   const [bankFilter, setBankFilter] = useState('')
   const [startDateFilter, setStartDateFilter] = useState('')
   const [endDateFilter, setEndDateFilter] = useState('')
-  const toast = useToast()
   const invalidateTransactions = useInvalidateBinanceTransactions()
 
   const queryParams = useMemo(() => {

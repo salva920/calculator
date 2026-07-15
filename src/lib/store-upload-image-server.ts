@@ -56,17 +56,18 @@ async function compressImageBytes(bytes: Buffer): Promise<Buffer> {
 
 /** Guarda la imagen como data URL en MongoDB (compatible con Vercel serverless). */
 export async function fileToDataUrl(file: File): Promise<string> {
-  let bytes = Buffer.from(await file.arrayBuffer())
+  const input = Buffer.from(await file.arrayBuffer())
   let mime = file.type || guessMime(file.name)
 
-  if (bytes.byteLength > MAX_IMAGE_BYTES) {
+  let output: Buffer = input
+  if (input.byteLength > MAX_IMAGE_BYTES) {
     if (!mime.startsWith('image/')) {
       throw new Error(`La imagen es demasiado grande (máx. ${formatMaxSize(MAX_IMAGE_BYTES)})`)
     }
-    bytes = await compressImageBytes(bytes)
+    output = Buffer.from(await compressImageBytes(input))
     mime = 'image/jpeg'
   }
 
-  const base64 = bytes.toString('base64')
+  const base64 = output.toString('base64')
   return `data:${mime};base64,${base64}`
 }
