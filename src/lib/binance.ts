@@ -352,6 +352,18 @@ export class BinanceAPI {
    * Requiere API Key con permiso "Enable Reading".
    */
   async getUSDTBalance(): Promise<{ free: number; locked: number; total: number } | null> {
+    const summary = await this.getSpotWalletSummary()
+    return summary?.usdt ?? null
+  }
+
+  /**
+   * Resumen de billetera Spot: USDT + activos con saldo + estimado total en USDT.
+   */
+  async getSpotWalletSummary(): Promise<{
+    usdt: { free: number; locked: number; total: number }
+    assets: Array<{ asset: string; free: number; locked: number; total: number; usdtValue: number }>
+    estimatedTotalUsdt: number
+  } | null> {
     try {
       const serverTime = await this.getServerTime()
       const recvWindow = 10000
@@ -368,17 +380,157 @@ export class BinanceAPI {
       })
 
       throwIfBinanceGeoRestricted(response.data)
-      const balances = response.data?.balances || []
-      const usdt = balances.find((b: any) => (b.asset || '').toUpperCase() === 'USDT')
-      if (!usdt) {
-        return { free: 0, locked: 0, total: 0 }
+      const balances = (response.data?.balances || []) as Array<{
+        asset: string
+        free: string
+        locked: string
+      }>
+
+      const nonZero = balances
+        .map((b) => {
+          const free = parseFloat(b.free || '0')
+          const locked = parseFloat(b.locked || '0')
+          return {
+            asset: (b.asset || '').toUpperCase(),
+            free,
+            locked,
+            total: free + locked,
+          }
+        })
+        .filter((b) => b.total > 0)
+
+      const usdtRow = nonZero.find((b) => b.asset === 'USDT')
+      const usdt = usdtRow
+        ? { free: usdtRow.free, locked: usdtRow.locked, total: usdtRow.total }
+        : { free: 0, locked: 0, total: 0 }
+
+      // Precios para estimar valor en USDT (máx. 15 activos para no saturar)
+      const toPrice = nonZero.filter((b) => b.asset !== 'USDT').slice(0, 15)
+      const priceMap = new Map<string, number>()
+
+      await Promise.all(
+        toPrice.map(async (b) => {
+          try {
+            const symbol = `${b.asset}USDT`
+            const priceRes = await axios.get('https://api.binance.com/api/v3/ticker/price', {
+              ...getBinanceAxiosConfig(8000),
+              params: { symbol },
+            })
+            const price = parseFloat(priceRes.data?.price || '0')
+            if (Number.isFinite(price) && price > 0) {
+              priceMap.set(b.asset, price)
+            }
+          } catch {
+            // Algunos activos no tienen par *USDT; se omiten del estimado
+          }
+        })
+      )
+
+      const assets = nonZero.map((b) => {
+        if (b.asset === 'USDT') {
+          return { ...b, usdtValue: b.total }
+        }
+        const price = priceMap.get(b.asset) ?? 0
+        return { ...b, usdtValue: price > 0 ? b.total * price : 0 }
+      })
+
+      const estimatedTotalUsdt = assets.reduce((sum, a) => sum + a.usdtValue, 0)
+
+      return {
+        usdt,
+        assets: assets.sort((a, b) => b.usdtValue - a.usdtValue),
+        estimatedTotalUsdt,
       }
+    } catch (error: any) {
+      if (error instanceof BinanceGeoRestrictedError) {
+        throw error
+      }
+      console.error('Error obteniendo saldo Spot:', error.response?.data || error.message)
+      return null
+    }
+  }
+
+  /**
+   * Saldo Funding (donde suele estar el USDT de P2P).
+   * POST /sapi/v1/asset/get-funding-asset
+   */
+  async getFundingUsdtBalance(): Promise<{
+    free: number
+    locked: number
+    freeze: number
+    total: number
+  } | null> {
+    try {
+      const serverTime = await this.getServerTime()
+      const recvWindow = 10000
+      const params = new URLSearchParams({
+        asset: 'USDT',
+        recvWindow: recvWindow.toString(),
+        timestamp: serverTime.toString(),
+      })
+      const queryString = params.toString()
+      const signature = this.generateSignature(queryString)
+
+      const response = await axios.post(
+        `https://api.binance.com/sapi/v1/asset/get-funding-asset?${queryString}&signature=${signature}`,
+        null,
+        {
+          ...getBinanceAxiosConfig(BINANCE_HTTP_TIMEOUT_MS),
+          headers: { 'X-MBX-APIKEY': this.apiKey },
+        }
+      )
+
+      throwIfBinanceGeoRestricted(response.data)
+
+      const rows = Array.isArray(response.data) ? response.data : []
+      const usdt = rows.find((b: any) => (b.asset || '').toUpperCase() === 'USDT')
+      if (!usdt) {
+        return { free: 0, locked: 0, freeze: 0, total: 0 }
+      }
+
       const free = parseFloat(usdt.free || '0')
       const locked = parseFloat(usdt.locked || '0')
-      return { free, locked, total: free + locked }
+      const freeze = parseFloat(usdt.freeze || '0')
+      return { free, locked, freeze, total: free + locked + freeze }
     } catch (error: any) {
-      console.error('Error obteniendo saldo USDT:', error.response?.data || error.message)
+      if (error instanceof BinanceGeoRestrictedError) {
+        throw error
+      }
+      console.error('Error obteniendo saldo Funding:', error.response?.data || error.message)
       return null
+    }
+  }
+
+  /**
+   * Spot + Funding: total operativo para P2P.
+   */
+  async getCombinedWalletSummary(): Promise<{
+    spot: {
+      usdt: { free: number; locked: number; total: number }
+      estimatedTotalUsdt: number
+      assets: Array<{ asset: string; free: number; locked: number; total: number; usdtValue: number }>
+    }
+    funding: { free: number; locked: number; freeze: number; total: number }
+    usdtTotal: number
+  } | null> {
+    const [spot, funding] = await Promise.all([
+      this.getSpotWalletSummary(),
+      this.getFundingUsdtBalance(),
+    ])
+
+    if (!spot && !funding) return null
+
+    const spotUsdt = spot?.usdt ?? { free: 0, locked: 0, total: 0 }
+    const fundingUsdt = funding ?? { free: 0, locked: 0, freeze: 0, total: 0 }
+
+    return {
+      spot: {
+        usdt: spotUsdt,
+        estimatedTotalUsdt: spot?.estimatedTotalUsdt ?? 0,
+        assets: spot?.assets ?? [],
+      },
+      funding: fundingUsdt,
+      usdtTotal: spotUsdt.total + fundingUsdt.total,
     }
   }
 

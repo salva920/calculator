@@ -239,3 +239,27 @@ model CapitalPartner {
   @@index([isActive])
   @@map("capital_partners")
 }
+
+/// Historial diario de fondos Binance (Funding + Spot). Un registro por día Caracas.
+model WalletBalanceDaily {
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  /// Día calendario Caracas (yyyy-mm-dd 00:00 -04:00)
+  date                DateTime @unique @db.Date
+  dateYmd             String // "2026-07-22" para filtros rápidos
+  fundingFree         Float    @default(0)
+  fundingLocked       Float    @default(0)
+  fundingFreeze       Float    @default(0)
+  fundingTotal        Float    @default(0)
+  spotUsdtTotal       Float    @default(0)
+  usdtTotal           Float // Funding + Spot USDT (cierre / última lectura)
+  estimatedTotalUsdt  Float    @default(0)
+  highUsdtTotal       Float // Máximo consolidado del día
+  lowUsdtTotal        Float // Mínimo consolidado del día
+  samples             Int      @default(1)
+  lastCapturedAt      DateTime @default(now())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([dateYmd])
+  @@map("wallet_balance_daily")
+}

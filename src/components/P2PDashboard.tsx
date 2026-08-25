@@ -28,18 +28,25 @@ import {
   IconButton,
   Tooltip,
 } from '@chakra-ui/react'
-import { FaArrowUp, FaArrowDown, FaSync } from 'react-icons/fa'
+import { FaArrowUp, FaArrowDown, FaSync, FaWallet } from 'react-icons/fa'
 import axios from 'axios'
 import { requestBinanceSync } from '@/lib/binance-sync-client'
 import { useBinanceMetrics, useRefreshBinanceMetrics } from '@/hooks/useBinanceMetrics'
+import { useBinanceBalance, useInvalidateBinanceBalance } from '@/hooks/useBinanceBalance'
 import InsightPanel from '@/components/ui/InsightPanel'
+
+const WALLET_BANNER_STORAGE_KEY = 'p2p-show-wallet-banner'
 
 export default function P2PDashboard() {
   const { data: metrics, isLoading } = useBinanceMetrics()
   const refreshMetrics = useRefreshBinanceMetrics()
+  const { data: balance, isLoading: isBalanceLoading, error: balanceError, refetch: refetchBalance } =
+    useBinanceBalance()
+  const invalidateBalance = useInvalidateBinanceBalance()
   const [isSyncing, setIsSyncing] = useState(false)
   const [isSavingAdjustment, setIsSavingAdjustment] = useState(false)
   const [showManualAdjustments, setShowManualAdjustments] = useState(false)
+  const [showWalletBanner, setShowWalletBanner] = useState(false)
   const [adjustmentType, setAdjustmentType] = useState<'BUY_EXTERNAL' | 'SELL_EXTERNAL' | 'SETTLEMENT'>('BUY_EXTERNAL')
   const [adjustmentAmount, setAdjustmentAmount] = useState('')
   const [adjustmentNote, setAdjustmentNote] = useState('')
@@ -47,12 +54,35 @@ export default function P2PDashboard() {
   const toast = useToast()
 
   useEffect(() => {
+    try {
+      setShowWalletBanner(localStorage.getItem(WALLET_BANNER_STORAGE_KEY) === '1')
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  const toggleWalletBanner = () => {
+    setShowWalletBanner((prev) => {
+      const next = !prev
+      try {
+        localStorage.setItem(WALLET_BANNER_STORAGE_KEY, next ? '1' : '0')
+      } catch {
+        // ignore
+      }
+      return next
+    })
+  }
+
+  useEffect(() => {
     const handleSync = () => {
-      setTimeout(() => void refreshMetrics(true), 1000)
+      setTimeout(() => {
+        void refreshMetrics(true)
+        invalidateBalance()
+      }, 1000)
     }
     window.addEventListener('binance-sync-completed', handleSync)
     return () => window.removeEventListener('binance-sync-completed', handleSync)
-  }, [refreshMetrics])
+  }, [refreshMetrics, invalidateBalance])
 
   const handleSync = async () => {
     setIsSyncing(true)
@@ -89,7 +119,10 @@ export default function P2PDashboard() {
             isClosable: true,
           })
         }
-        setTimeout(() => void refreshMetrics(true), 800)
+        setTimeout(() => {
+          void refreshMetrics(true)
+          invalidateBalance()
+        }, 800)
       } else if (response.error) {
         toast({
           title: 'Error de sincronización',
@@ -212,6 +245,16 @@ export default function P2PDashboard() {
               Panel en vivo
             </Text>
             <HStack spacing={2}>
+              <Tooltip label={showWalletBanner ? 'Ocultar billetera' : 'Mostrar billetera'}>
+                <IconButton
+                  aria-label={showWalletBanner ? 'Ocultar billetera' : 'Mostrar billetera'}
+                  icon={<FaWallet />}
+                  size="sm"
+                  colorScheme={showWalletBanner ? 'blue' : 'gray'}
+                  variant={showWalletBanner ? 'solid' : 'ghost'}
+                  onClick={toggleWalletBanner}
+                />
+              </Tooltip>
               <Tooltip label="Sincronizar transacciones ahora">
                 <IconButton
                   aria-label="Sincronizar"
@@ -283,6 +326,114 @@ export default function P2PDashboard() {
       </CardHeader>
       <CardBody pt={4}>
         <VStack spacing={3} align="stretch">
+          <Collapse in={showWalletBanner} animateOpacity>
+            <InsightPanel accent="blue" p={{ base: 2, md: 3 }}>
+              <HStack justify="space-between" mb={2} flexWrap="wrap" align="center">
+                <HStack spacing={2}>
+                  <FaWallet size={14} />
+                  <Text fontSize={{ base: 'xs', md: 'sm' }} fontWeight="bold" color="blue.800">
+                    Billetera Binance
+                  </Text>
+                </HStack>
+                <HStack spacing={1}>
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    onClick={() => void refetchBalance()}
+                    isLoading={isBalanceLoading}
+                  >
+                    Actualizar
+                  </Button>
+                  <Button size="xs" variant="outline" onClick={toggleWalletBanner}>
+                    Ocultar
+                  </Button>
+                </HStack>
+              </HStack>
+
+              {balance ? (
+                <SimpleGrid columns={{ base: 2, md: 4 }} spacing={2}>
+                  <VStack align="start" spacing={0}>
+                    <Text fontSize="10px" color="gray.600">
+                      USDT total (P2P)
+                    </Text>
+                    <Text fontSize={{ base: 'md', md: 'lg' }} fontWeight="bold" color="blue.700">
+                      {(balance.usdtTotal ?? balance.usdt.total).toFixed(2)}
+                    </Text>
+                    <Text fontSize="10px" color="gray.500">
+                      Funding + Spot
+                    </Text>
+                  </VStack>
+                  <VStack align="start" spacing={0}>
+                    <Text fontSize="10px" color="gray.600">
+                      Funding (P2P)
+                    </Text>
+                    <Text fontSize={{ base: 'sm', md: 'md' }} fontWeight="bold">
+                      {(balance.funding?.total ?? 0).toFixed(2)} USDT
+                    </Text>
+                    <Text fontSize="10px" color="gray.500">
+                      libre {(balance.funding?.free ?? 0).toFixed(2)}
+                    </Text>
+                  </VStack>
+                  <VStack align="start" spacing={0}>
+                    <Text fontSize="10px" color="gray.600">
+                      Spot USDT
+                    </Text>
+                    <Text fontSize={{ base: 'sm', md: 'md' }} fontWeight="bold">
+                      {(balance.spot?.usdt.total ?? balance.usdt.total).toFixed(2)}
+                    </Text>
+                    <Text fontSize="10px" color="gray.500">
+                      + polvo ~{(balance.spot?.estimatedTotalUsdt ?? 0).toFixed(2)}
+                    </Text>
+                  </VStack>
+                  {metrics.latestSellPrice > 0 && (
+                    <VStack align="start" spacing={0}>
+                      <Text fontSize="10px" color="gray.600">
+                        ≈ en Bs (tasa venta)
+                      </Text>
+                      <Text fontSize={{ base: 'sm', md: 'md' }} fontWeight="bold">
+                        {(
+                          (balance.usdtTotal ?? balance.usdt.total) * metrics.latestSellPrice
+                        ).toLocaleString('es-VE', {
+                          style: 'currency',
+                          currency: 'VES',
+                          maximumFractionDigits: 0,
+                        })}
+                      </Text>
+                    </VStack>
+                  )}
+                  {balance.history?.highUsdtTotal != null && (
+                    <VStack align="start" spacing={0} gridColumn={{ base: '1 / -1', md: 'auto' }}>
+                      <Text fontSize="10px" color="gray.600">
+                        Máximo del mes ({balance.history.month})
+                      </Text>
+                      <Text fontSize={{ base: 'sm', md: 'md' }} fontWeight="bold" color="green.600">
+                        {balance.history.highUsdtTotal.toFixed(2)} USDT
+                      </Text>
+                      <Text fontSize="10px" color="gray.500">
+                        {balance.history.highDateYmd
+                          ? `día ${balance.history.highDateYmd}`
+                          : ''}
+                        {balance.history.daysTracked
+                          ? ` · ${balance.history.daysTracked} día(s) registrados`
+                          : ''}
+                      </Text>
+                    </VStack>
+                  )}
+                </SimpleGrid>
+              ) : isBalanceLoading ? (
+                <Text fontSize="sm" color="gray.500">
+                  Consultando saldo en Binance...
+                </Text>
+              ) : (
+                <Text fontSize="sm" color="orange.600">
+                  {(balanceError as any)?.code === 'BINANCE_GEO_RESTRICTED'
+                    ? 'Binance bloqueado desde este servidor. Prueba en local o con proxy.'
+                    : (balanceError as Error)?.message ||
+                      'No se pudo cargar el saldo. Revisa la conexión Binance.'}
+                </Text>
+              )}
+            </InsightPanel>
+          </Collapse>
 
           {/* Ordenes de HOY - Compacto */}
           <InsightPanel accent="brand" p={{ base: 2, md: 3 }}>
@@ -299,7 +450,7 @@ export default function P2PDashboard() {
             {metrics.todayCyclesSummary && metrics.todayCyclesSummary.cycles.length > 0 && (
               <InsightPanel accent="green" mb={3} p={2}>
                 <Text fontSize={{ base: 'xs', md: 'sm' }} fontWeight="bold" color="green.700" mb={1}>
-                  Ganancia por ciclos hoy
+                  Ganancia por ciclos hoy (FIFO)
                 </Text>
                 <HStack justify="space-between" flexWrap="wrap" align="center">
                   <Text fontSize={{ base: 'xs', md: 'sm' }} color="gray.700">
@@ -309,6 +460,185 @@ export default function P2PDashboard() {
                     Total: {metrics.todayCyclesSummary.totalProfitFromCycles.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs.S
                   </Text>
                 </HStack>
+                <Text fontSize="10px" color="gray.500" mt={1}>
+                  Empareja ventas antiguas con compras de hoy. Para P&amp;L del día mira la estimación bajo
+                  “Brecha actual de tasas”.
+                </Text>
+              </InsightPanel>
+            )}
+
+            {(metrics.todayMatchedUsdt ?? 0) > 0 && (
+              <InsightPanel accent="blue" mb={3} p={2}>
+                <Text fontSize={{ base: 'xs', md: 'sm' }} fontWeight="bold" color="blue.700" mb={1}>
+                  Estimación neta del día
+                </Text>
+                <HStack justify="space-between" flexWrap="wrap" align="center">
+                  <Text fontSize={{ base: 'xs', md: 'sm' }} color="gray.700">
+                    {(metrics.todayMatchedUsdt ?? 0).toFixed(2)} USDT × {(metrics.todaySpread ?? 0).toFixed(2)} − PM − Binance
+                  </Text>
+                  <Text
+                    fontSize="sm"
+                    fontWeight="bold"
+                    color={(metrics.todayEstimatedNetBs ?? 0) >= 0 ? 'green.600' : 'red.600'}
+                  >
+                    {(metrics.todayEstimatedNetBs ?? 0).toLocaleString('es-VE', {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    })}{' '}
+                    Bs.S
+                    {(metrics.todayAvgBuyPrice ?? 0) > 0 && (
+                      <> (~{(metrics.todayEstimatedNetUsdt ?? 0).toFixed(1)} USDT)</>
+                    )}
+                  </Text>
+                </HStack>
+              </InsightPanel>
+            )}
+
+            {metrics.liveCycleActive && (metrics.liveCycleSoldUsdt ?? 0) + (metrics.liveCycleBoughtUsdt ?? 0) > 0 && (
+              <InsightPanel accent="green" mb={3} p={2}>
+                <HStack justify="space-between" align="center" mb={1} flexWrap="wrap" gap={1}>
+                  <Text fontSize={{ base: 'xs', md: 'sm' }} fontWeight="bold" color="green.700">
+                    Ciclo en vivo (ganancia al comprar)
+                  </Text>
+                  <Badge
+                    colorScheme={(metrics.liveCycleNetUsdtAfterAd ?? 0) >= 0 ? 'green' : 'red'}
+                    fontSize={{ base: 'xs', md: 'sm' }}
+                    px={2}
+                    py={0.5}
+                  >
+                    {(metrics.liveCycleNetUsdtAfterAd ?? 0).toFixed(1)} USDT
+                    {(metrics.liveCycleProfitPercent ?? 0) !== 0 && (
+                      <> · {(metrics.liveCycleProfitPercent ?? 0).toFixed(2)}%</>
+                    )}
+                  </Badge>
+                </HStack>
+
+                {(metrics.liveCycleSoldUsdt ?? 0) > 0 && (
+                  <>
+                    <Progress
+                      value={metrics.liveCycleProgressPercent ?? 0}
+                      colorScheme={
+                        (metrics.liveCycleProgressPercent ?? 0) >= 99
+                          ? 'green'
+                          : (metrics.liveCycleProgressPercent ?? 0) >= 50
+                            ? 'blue'
+                            : 'orange'
+                      }
+                      size="sm"
+                      borderRadius="md"
+                      mb={1}
+                    />
+                    <Text fontSize="10px" color="gray.600" mb={2}>
+                      Recompra {(metrics.liveCycleBoughtUsdt ?? 0).toFixed(2)} /{' '}
+                      {(metrics.liveCycleSoldUsdt ?? 0).toFixed(2)} USDT (
+                      {(metrics.liveCycleProgressPercent ?? 0).toFixed(0)}%)
+                      {(metrics.liveCycleRemainingToBuyUsdt ?? 0) >= 0.01 && (
+                        <>
+                          {' '}
+                          · faltan {(metrics.liveCycleRemainingToBuyUsdt ?? 0).toFixed(2)} USDT
+                          {(metrics.liveCycleRemainingBuyBs ?? 0) > 0 && (
+                            <>
+                              {' '}
+                              (~
+                              {(metrics.liveCycleRemainingBuyBs ?? 0).toLocaleString('es-VE', {
+                                maximumFractionDigits: 0,
+                              })}{' '}
+                              Bs)
+                            </>
+                          )}
+                        </>
+                      )}
+                    </Text>
+                  </>
+                )}
+
+                <SimpleGrid columns={{ base: 2, md: 4 }} spacing={2} mb={2}>
+                  <VStack align="start" spacing={0}>
+                    <Text fontSize="10px" color="gray.600">Matched</Text>
+                    <Text fontSize="sm" fontWeight="bold">
+                      {(metrics.liveCycleMatchedUsdt ?? 0).toFixed(2)} USDT
+                    </Text>
+                  </VStack>
+                  <VStack align="start" spacing={0}>
+                    <Text fontSize="10px" color="gray.600">Spread</Text>
+                    <Text fontSize="sm" fontWeight="bold" color="green.600">
+                      {(metrics.liveCycleSpread ?? 0).toFixed(2)} Bs
+                    </Text>
+                  </VStack>
+                  <VStack align="start" spacing={0}>
+                    <Text fontSize="10px" color="gray.600">Media V / C</Text>
+                    <Text fontSize="sm" fontWeight="bold">
+                      {(metrics.liveCycleAvgSellPrice ?? 0).toFixed(1)} /{' '}
+                      {(metrics.liveCycleAvgBuyPrice ?? 0).toFixed(1)}
+                    </Text>
+                  </VStack>
+                  <VStack align="start" spacing={0}>
+                    <Text fontSize="10px" color="gray.600">% neto</Text>
+                    <Text
+                      fontSize="sm"
+                      fontWeight="bold"
+                      color={(metrics.liveCycleProfitPercent ?? 0) >= 0 ? 'green.600' : 'red.600'}
+                    >
+                      {(metrics.liveCycleProfitPercent ?? 0).toFixed(2)}%
+                    </Text>
+                  </VStack>
+                </SimpleGrid>
+
+                <SimpleGrid columns={{ base: 2, md: 3 }} spacing={2}>
+                  <VStack align="start" spacing={0}>
+                    <Text fontSize="10px" color="gray.600">Bruta</Text>
+                    <Text fontSize="sm" fontWeight="bold" color="green.600">
+                      {(metrics.liveCycleGrossBs ?? 0).toLocaleString('es-VE', {
+                        maximumFractionDigits: 0,
+                      })}{' '}
+                      Bs
+                    </Text>
+                  </VStack>
+                  <VStack align="start" spacing={0}>
+                    <Text fontSize="10px" color="gray.600">− PM − Binance</Text>
+                    <Text fontSize="sm" fontWeight="bold" color="orange.600">
+                      −
+                      {(
+                        (metrics.liveCyclePagoMovilFeeBs ?? 0) +
+                        (metrics.liveCycleBinanceFeeBs ?? 0)
+                      ).toLocaleString('es-VE', { maximumFractionDigits: 0 })}{' '}
+                      Bs
+                    </Text>
+                  </VStack>
+                  <VStack align="start" spacing={0}>
+                    <Text fontSize="10px" color="gray.600">Neta (tras anuncio)</Text>
+                    <Text
+                      fontSize="sm"
+                      fontWeight="bold"
+                      color={(metrics.liveCycleNetUsdtAfterAd ?? 0) >= 0 ? 'green.600' : 'red.600'}
+                    >
+                      {(metrics.liveCycleNetBs ?? 0).toLocaleString('es-VE', {
+                        maximumFractionDigits: 0,
+                      })}{' '}
+                      Bs (~{(metrics.liveCycleNetUsdtAfterAd ?? 0).toFixed(1)} USDT)
+                    </Text>
+                  </VStack>
+                </SimpleGrid>
+
+                <Text fontSize="10px" color="gray.500" mt={2}>
+                  Solo la ola de los últimos 3 días (venta→recompra). Tope ~15k USDT; se
+                  reinicia con hueco ≥10h o al cerrar ~95%.
+                  {(metrics.liveCycleMatchedUsdt ?? 0) < 0.01 &&
+                    (metrics.liveCycleSoldUsdt ?? 0) > 0 &&
+                    ' Empieza a comprar para ver la ganancia crecer.'}
+                  {(metrics.liveCycleInventoryUsdt ?? 0) !== 0 && (
+                    <>
+                      {' '}
+                      Inv. {(metrics.liveCycleInventoryUsdt ?? 0) >= 0 ? '+' : ''}
+                      {(metrics.liveCycleInventoryUsdt ?? 0).toFixed(2)} USDT · caja{' '}
+                      {(metrics.liveCycleCashDiffBs ?? 0) >= 0 ? '+' : ''}
+                      {(metrics.liveCycleCashDiffBs ?? 0).toLocaleString('es-VE', {
+                        maximumFractionDigits: 0,
+                      })}{' '}
+                      Bs.
+                    </>
+                  )}
+                </Text>
               </InsightPanel>
             )}
 
@@ -623,34 +953,86 @@ export default function P2PDashboard() {
                     </Text>
                   </VStack>
                 </SimpleGrid>
-                {metrics.todayCyclesSummary && (metrics.todayCyclesVolumeUsdt ?? 0) > 0 && (
+                {((metrics.todayMatchedUsdt ?? 0) > 0 || (metrics.todayCyclesVolumeUsdt ?? 0) > 0) && (
                   <Box w="full" pt={2} borderTopWidth="1px" borderColor="surface.border">
                     <Text fontSize="10px" color="gray.600" mb={1}>
-                      Ganancia real vs estimada (ciclos de hoy)
+                      Estimación del día (ops COMPLETED hoy)
                     </Text>
-                    <HStack spacing={4} flexWrap="wrap">
+                    <SimpleGrid columns={{ base: 2, md: 3 }} spacing={2} w="full" mb={2}>
                       <VStack align="start" spacing={0}>
-                        <Text fontSize="10px" color="gray.600">Real hoy</Text>
-                        <Text fontSize={{ base: 'sm', md: 'md' }} fontWeight="bold" color={metrics.todayCyclesSummary.totalProfitFromCycles >= 0 ? 'green.600' : 'red.600'}>
-                          {metrics.todayCyclesSummary.totalProfitFromCycles.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs.S
+                        <Text fontSize="10px" color="gray.600">USDT emparejados</Text>
+                        <Text fontSize={{ base: 'sm', md: 'md' }} fontWeight="bold">
+                          {(metrics.todayMatchedUsdt ?? 0).toFixed(2)}
                         </Text>
                       </VStack>
                       <VStack align="start" spacing={0}>
-                        <Text fontSize="10px" color="gray.600">Real /USDT (ciclos)</Text>
-                        <Text fontSize={{ base: 'sm', md: 'md' }} fontWeight="bold" color={metrics.todayCyclesSummary.totalProfitFromCycles >= 0 ? 'green.600' : 'red.600'}>
-                          {(
-                            metrics.todayCyclesSummary.totalProfitFromCycles /
-                            (metrics.todayCyclesVolumeUsdt || 1)
-                          ).toFixed(2)} Bs.S
-                        </Text>
-                      </VStack>
-                      <VStack align="start" spacing={0}>
-                        <Text fontSize="10px" color="gray.600">Estimada /USDT (brecha)</Text>
+                        <Text fontSize="10px" color="gray.600">Spread del día</Text>
                         <Text fontSize={{ base: 'sm', md: 'md' }} fontWeight="bold" color="green.600">
-                          {metrics.estimatedProfitPerUsdt.toFixed(2)} Bs.S
+                          {(metrics.todaySpread ?? 0).toFixed(2)} Bs.S
                         </Text>
                       </VStack>
-                    </HStack>
+                      <VStack align="start" spacing={0}>
+                        <Text fontSize="10px" color="gray.600">Bruta (matched × spread)</Text>
+                        <Text fontSize={{ base: 'sm', md: 'md' }} fontWeight="bold" color="green.600">
+                          {(metrics.todayEstimatedGrossBs ?? 0).toLocaleString('es-VE', {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                          })}{' '}
+                          Bs.S
+                        </Text>
+                      </VStack>
+                      <VStack align="start" spacing={0}>
+                        <Text fontSize="10px" color="gray.600">Fee PagoMóvil 0,30%</Text>
+                        <Text fontSize={{ base: 'sm', md: 'md' }} fontWeight="bold" color="orange.600">
+                          −{(metrics.todayPagoMovilFeeBs ?? 0).toLocaleString('es-VE', {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                          })}{' '}
+                          Bs.S
+                        </Text>
+                      </VStack>
+                      <VStack align="start" spacing={0}>
+                        <Text fontSize="10px" color="gray.600">Fee Binance</Text>
+                        <Text fontSize={{ base: 'sm', md: 'md' }} fontWeight="bold" color="orange.600">
+                          −{(metrics.todayBinanceFeeBs ?? 0).toLocaleString('es-VE', {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                          })}{' '}
+                          Bs.S
+                        </Text>
+                      </VStack>
+                      <VStack align="start" spacing={0}>
+                        <Text fontSize="10px" color="gray.600">Neta estimada</Text>
+                        <Text
+                          fontSize={{ base: 'sm', md: 'md' }}
+                          fontWeight="bold"
+                          color={(metrics.todayEstimatedNetBs ?? 0) >= 0 ? 'green.600' : 'red.600'}
+                        >
+                          {(metrics.todayEstimatedNetBs ?? 0).toLocaleString('es-VE', {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                          })}{' '}
+                          Bs.S
+                          {(metrics.todayAvgBuyPrice ?? 0) > 0 && (
+                            <Text as="span" fontSize="10px" color="gray.500" ml={1}>
+                              (~{(metrics.todayEstimatedNetUsdt ?? 0).toFixed(1)} USDT)
+                            </Text>
+                          )}
+                        </Text>
+                      </VStack>
+                    </SimpleGrid>
+                    {(metrics.todayMatchedUsdt ?? 0) < 0.01 && (
+                      <Text fontSize="10px" color="gray.500">
+                        Hoy solo hay un lado (compra o venta). La estimación neta aparece cuando hay
+                        ambos lados COMPLETED el mismo día.
+                      </Text>
+                    )}
+                    {metrics.todayCyclesSummary && (metrics.todayCyclesVolumeUsdt ?? 0) > 0 && (
+                      <Text fontSize="10px" color="gray.500" mt={1}>
+                        Nota: la “ganancia por ciclos” FIFO puede diferir (cierra ventas viejas con
+                        compras de hoy). La estimación de arriba usa solo tasas y volumen de hoy.
+                      </Text>
+                    )}
                   </Box>
                 )}
               </VStack>

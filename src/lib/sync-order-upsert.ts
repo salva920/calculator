@@ -65,15 +65,11 @@ function buildOrderData(order: BinanceOrderPayload, existing: ExistingOrder) {
   )
   const paymentMethod = order.paymentMethod || ''
   const fiatAmount = parseFloat(order.fiatAmount || '0')
-  const isSell = (order.tradeType || '').toUpperCase() === 'SELL'
 
-  let bankCommission = 0
-  let bankCommissionType: 'percentage' | 'fixed' = 'percentage'
-  if (isSell) {
-    const paymentConfig = getPaymentCommission(paymentMethod)
-    bankCommission = calculateBankCommission(fiatAmount, paymentMethod)
-    bankCommissionType = paymentConfig.commissionType as 'percentage' | 'fixed'
-  }
+  // Comisión bancaria/PM aplica en compras y ventas (ej. Pago Móvil 0,30% del monto en Bs)
+  const paymentConfig = getPaymentCommission(paymentMethod)
+  const bankCommission = calculateBankCommission(fiatAmount, paymentMethod)
+  const bankCommissionType = paymentConfig.commissionType as 'percentage' | 'fixed'
 
   return {
     binanceOrderId: order.orderNumber,

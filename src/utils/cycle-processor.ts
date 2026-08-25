@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { calculateBankCommission } from '@/lib/payment-commissions'
 
 const MIN_CYCLE_USDT = 0.01 // mínimo para considerar un ciclo (evitar polvo)
 const CYCLE_CREATE_BATCH_SIZE = 20
@@ -96,7 +97,7 @@ export async function processAndSaveCycles(
           cycleSellAmount += take
           cycleSellFiat += ratio * item.tx.fiatAmount
           cycleSellCommission += ratio * item.tx.commission
-          cycleSellBankComm += ratio * (item.tx.bankCommission || 0)
+          cycleSellBankComm += ratio * (item.tx.bankCommission || calculateBankCommission(item.tx.fiatAmount, item.tx.paymentMethod))
           item.remaining -= take
           if (cycleSells.length === 0 || cycleSells[cycleSells.length - 1].id !== item.tx.id) cycleSells.push(item.tx)
           if (item.remaining <= 0.01) sellQueue.shift()
@@ -111,7 +112,7 @@ export async function processAndSaveCycles(
           cycleBuyAmount += take
           cycleBuyFiat += ratio * item.tx.fiatAmount
           cycleBuyCommission += ratio * item.tx.commission
-          cycleBuyBankComm += ratio * (item.tx.bankCommission || 0)
+          cycleBuyBankComm += ratio * (item.tx.bankCommission || calculateBankCommission(item.tx.fiatAmount, item.tx.paymentMethod))
           item.remaining -= take
           if (cycleBuys.length === 0 || cycleBuys[cycleBuys.length - 1].id !== item.tx.id) cycleBuys.push(item.tx)
           if (item.remaining <= 0.01) buyQueue.shift()

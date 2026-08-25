@@ -12,7 +12,8 @@
     "db:generate": "prisma generate",
     "check-compras-hoy": "node scripts/check-compras-hoy.js",
     "check-binance-bank-field": "node scripts/check-binance-bank-field.js",
-    "sync:local": "node scripts/sync-binance-local.js"
+    "sync:local": "node scripts/sync-binance-local.js",
+    "snapshot:wallet": "node scripts/snapshot-wallet-local.js"
   },
   "dependencies": {
     "@chakra-ui/react": "^2.8.2",

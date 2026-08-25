@@ -11,6 +11,10 @@ import {
   getTodayBoundsCaracas,
   isCompletedInWindow,
 } from '@/utils/caracas-date'
+import {
+  isPagoMovilMethod,
+  PAGO_MOVIL_FEE_PERCENT,
+} from '@/lib/payment-commissions'
 import type { DashboardMetrics } from '@/types/metrics'
 
 const MIN_CYCLE_USDT = 0.01
@@ -34,6 +38,7 @@ type TxSlice = {
   commission: number
   unitPrice: number
   bankCommission: number
+  paymentMethod?: string | null
   createTime: Date
   completedAt: Date | null
   binanceOrderId: string
@@ -170,6 +175,7 @@ export async function computeDashboardMetrics(
           commission: true,
           unitPrice: true,
           bankCommission: true,
+          paymentMethod: true,
           createTime: true,
           completedAt: true,
           binanceOrderId: true,
@@ -189,6 +195,7 @@ export async function computeDashboardMetrics(
           commission: true,
           unitPrice: true,
           bankCommission: true,
+          paymentMethod: true,
           createTime: true,
           completedAt: true,
           binanceOrderId: true,
@@ -206,6 +213,7 @@ export async function computeDashboardMetrics(
           commission: true,
           unitPrice: true,
           bankCommission: true,
+          paymentMethod: true,
           createTime: true,
           completedAt: true,
           binanceOrderId: true,
@@ -214,7 +222,14 @@ export async function computeDashboardMetrics(
     () =>
       prisma.binanceP2PTransaction.findMany({
         where: { orderStatus: 'COMPLETED', createTime: { gte: startDate } },
-        select: { tradeType: true, amount: true, createTime: true },
+        select: {
+          tradeType: true,
+          amount: true,
+          fiatAmount: true,
+          commission: true,
+          paymentMethod: true,
+          createTime: true,
+        },
         orderBy: { createTime: 'asc' },
       }),
     () =>
@@ -262,6 +277,9 @@ export async function computeDashboardMetrics(
   const completedForCarry = batchResults[9] as Array<{
     tradeType: string
     amount: number
+    fiatAmount: number
+    commission: number
+    paymentMethod: string | null
     createTime: Date
   }>
   const manualAdjustments = batchResults[10] as ManualAdjustmentRecord[]
@@ -364,28 +382,52 @@ export async function computeDashboardMetrics(
 
   const avgBinanceCommissionPercent =
     buyAgg._count > 0 ? avgCommissionPercent(recentPeriodBuys, 'commission') : 0.1
-  const avgBankCommissionPercent =
-    buyAgg._count > 0 ? avgCommissionPercent(recentPeriodBuys, 'bankCommission') : 0.3
 
   const recentBuyCommissions =
     recentBuys.length > 0
       ? avgCommissionPercent(recentBuys, 'commission')
       : avgBinanceCommissionPercent
-  const recentBuyBankCommissions =
-    recentBuys.length > 0
-      ? avgCommissionPercent(recentBuys, 'bankCommission')
-      : avgBankCommissionPercent
-  const totalCommissionPercent = recentBuyCommissions + recentBuyBankCommissions
 
   const estimatedProfitPerUsdt =
     currentGap > 0 && latestBuyPrice > 0
-      ? Math.max(0, currentGap - latestBuyPrice * (totalCommissionPercent / 100))
+      ? Math.max(
+          0,
+          currentGap -
+            latestBuyPrice * (recentBuyCommissions / 100) -
+            (latestBuyPrice + latestSellPrice) * (PAGO_MOVIL_FEE_PERCENT / 100)
+        )
       : 0
   const estimatedROI =
     latestBuyPrice > 0 && estimatedProfitPerUsdt > 0
       ? (estimatedProfitPerUsdt / latestBuyPrice) * 100
       : 0
   const isGapTooSmall = currentGapPercent < 1
+
+  // Estimación operativa del DÍA (mismo criterio que el análisis manual):
+  // matched = min(compras, ventas) del día; spread = tasa media venta − compra; − fees PM 0,30% y Binance
+  const todayAvgBuyPrice = todayBuyAmount > 0 ? todayBuyValue / todayBuyAmount : 0
+  const todayAvgSellPrice = todaySellAmount > 0 ? todaySellValue / todaySellAmount : 0
+  const todayMatchedUsdt =
+    todayBuyAmount > 0 && todaySellAmount > 0 ? Math.min(todayBuyAmount, todaySellAmount) : 0
+  const todaySpread =
+    todayAvgBuyPrice > 0 && todayAvgSellPrice > 0 ? todayAvgSellPrice - todayAvgBuyPrice : 0
+  const todayEstimatedGrossBs = todayMatchedUsdt > 0 ? todayMatchedUsdt * todaySpread : 0
+
+  const todayPmBuyFiat = todayCompletedBuys
+    .filter((tx) => isPagoMovilMethod(tx.paymentMethod))
+    .reduce((s, tx) => s + tx.fiatAmount, 0)
+  const todayPmSellFiat = todayCompletedSells
+    .filter((tx) => isPagoMovilMethod(tx.paymentMethod))
+    .reduce((s, tx) => s + tx.fiatAmount, 0)
+  const todayPagoMovilFeeBs =
+    todayPmBuyFiat * (PAGO_MOVIL_FEE_PERCENT / 100) +
+    todayPmSellFiat * (PAGO_MOVIL_FEE_PERCENT / 100)
+  const todayBinanceFeeBs = todayCommissions
+  const todayEstimatedNetBs = todayEstimatedGrossBs - todayPagoMovilFeeBs - todayBinanceFeeBs
+  const todayEstimatedNetUsdt =
+    todayAvgBuyPrice > 0 ? todayEstimatedNetBs / todayAvgBuyPrice : 0
+  const todayEstimatedNetPerUsdt =
+    todayMatchedUsdt > 0 ? todayEstimatedNetBs / todayMatchedUsdt : 0
 
   const todayYmd = formatDateYmdCaracas(today)
   const todayCycles = [...todayCyclesRaw]
@@ -408,20 +450,34 @@ export async function computeDashboardMetrics(
     totalProfitFromCycles: cumulative,
   }
 
-  type CarryEvent = { tradeType: 'BUY' | 'SELL'; amount: number; createTime: Date }
+  type CarryEvent = {
+    tradeType: 'BUY' | 'SELL'
+    amount: number
+    fiatAmount: number
+    commission: number
+    paymentMethod: string | null
+    createTime: Date
+  }
   const carryEvents: CarryEvent[] = [
     ...completedForCarry.map((tx) => ({
       tradeType: tx.tradeType as 'BUY' | 'SELL',
       amount: tx.amount,
+      fiatAmount: tx.fiatAmount,
+      commission: tx.commission,
+      paymentMethod: tx.paymentMethod,
       createTime: new Date(tx.createTime),
     })),
     ...manualAdjustments.map((adj) => ({
       tradeType: (adj.type === 'SELL_EXTERNAL' ? 'SELL' : 'BUY') as 'BUY' | 'SELL',
       amount: adj.usdtAmount,
+      fiatAmount: 0,
+      commission: 0,
+      paymentMethod: null as string | null,
       createTime: adj.createdAt,
     })),
   ].sort((a, b) => a.createTime.getTime() - b.createTime.getTime())
 
+  // Carry global (desbalance acumulado) — igual que antes
   let pendingSell = 0
   let pendingBuy = 0
   for (const event of carryEvents) {
@@ -432,6 +488,273 @@ export async function computeDashboardMetrics(
       pendingSell -= subtract
       pendingBuy -= subtract
     }
+  }
+
+  /**
+   * Ciclo en vivo = ola reciente (venta→recompra), NO todo el historial.
+   * Ventana 3 días + soft-close + tope 15k + hueco 10h entre ventas.
+   */
+  const LIVE_CYCLE_LOOKBACK_MS = 3 * 24 * 60 * 60 * 1000
+  const LIVE_CYCLE_SELL_GAP_MS = 10 * 60 * 60 * 1000
+  const LIVE_CYCLE_SOFT_CLOSE_RATIO = 0.05
+  const LIVE_CYCLE_MAX_WAVE_USDT = 15_000
+
+  const liveCutoffMs = Date.now() - LIVE_CYCLE_LOOKBACK_MS
+  const liveCarryEvents = carryEvents.filter(
+    (e) => e.createTime.getTime() >= liveCutoffMs
+  )
+
+  type WaveLot = {
+    amount: number
+    fiatAmount: number
+    commission: number
+    paymentMethod: string | null
+  }
+
+  let sellLots: WaveLot[] = []
+  let buyLots: WaveLot[] = []
+  let waveEvents: CarryEvent[] = []
+  let lastClosedWaveEvents: CarryEvent[] | null = null
+  let lastSellAtMs = 0
+
+  const lotSum = (lots: WaveLot[]) => lots.reduce((s, l) => s + l.amount, 0)
+
+  const matchWaveLots = () => {
+    while (sellLots.length > 0 && buyLots.length > 0) {
+      const sLot = sellLots[0]
+      const bLot = buyLots[0]
+      const take = Math.min(sLot.amount, bLot.amount)
+      if (take <= 0) break
+      const sFiatTake = sLot.amount > 0 ? (sLot.fiatAmount * take) / sLot.amount : 0
+      const bFiatTake = bLot.amount > 0 ? (bLot.fiatAmount * take) / bLot.amount : 0
+      const sFeeTake = sLot.amount > 0 ? (sLot.commission * take) / sLot.amount : 0
+      const bFeeTake = bLot.amount > 0 ? (bLot.commission * take) / bLot.amount : 0
+      sLot.amount -= take
+      sLot.fiatAmount -= sFiatTake
+      sLot.commission -= sFeeTake
+      bLot.amount -= take
+      bLot.fiatAmount -= bFiatTake
+      bLot.commission -= bFeeTake
+      if (sLot.amount < MIN_CYCLE_USDT) sellLots.shift()
+      if (bLot.amount < MIN_CYCLE_USDT) buyLots.shift()
+    }
+  }
+
+  const waveSoldBought = (events: CarryEvent[]) => {
+    let sold = 0
+    let bought = 0
+    for (const e of events) {
+      if (e.tradeType === 'SELL') sold += e.amount
+      else bought += e.amount
+    }
+    return { sold, bought }
+  }
+
+  const residualFromSellLots = (): CarryEvent[] =>
+    sellLots
+      .filter((l) => l.amount >= MIN_CYCLE_USDT)
+      .map((l) => ({
+        tradeType: 'SELL' as const,
+        amount: l.amount,
+        fiatAmount: l.fiatAmount,
+        commission: l.commission,
+        paymentMethod: l.paymentMethod,
+        createTime: new Date(liveCutoffMs),
+      }))
+
+  /**
+   * Soft-close solo si ya hubo recompra real (≥95%).
+   * Nunca cerrar una ola solo-ventas (antes el umbral 200 USDT borraba compras al reiniciar).
+   */
+  const shouldSoftCloseWave = (events: CarryEvent[]) => {
+    const { sold, bought } = waveSoldBought(events)
+    if (sold < MIN_CYCLE_USDT || bought < MIN_CYCLE_USDT) return false
+    const remaining = sold - bought
+    const progress = bought / sold
+    // Cierre total
+    if (remaining <= MIN_CYCLE_USDT && lotSum(sellLots) < MIN_CYCLE_USDT) return true
+    if (lotSum(buyLots) >= MIN_CYCLE_USDT) return false
+    // Casi cerrado
+    if (progress >= 0.95) {
+      const threshold = Math.max(50, sold * LIVE_CYCLE_SOFT_CLOSE_RATIO)
+      return remaining <= threshold
+    }
+    // Ola demasiado grande y ya recompramos al menos la mitad → partir
+    if (sold > LIVE_CYCLE_MAX_WAVE_USDT && progress >= 0.5) return true
+    return false
+  }
+
+  const beginNewWaveWithResidualAndSell = (sellEvent: CarryEvent) => {
+    const { sold } = waveSoldBought(waveEvents)
+    if (
+      sold >= MIN_CYCLE_USDT &&
+      sold <= LIVE_CYCLE_MAX_WAVE_USDT * 1.2
+    ) {
+      lastClosedWaveEvents = waveEvents
+    }
+    const residual = residualFromSellLots()
+    waveEvents = [...residual, sellEvent]
+    // sellLots ya tiene el remanente; se agrega el nuevo sell después
+    buyLots = []
+  }
+
+  for (const event of liveCarryEvents) {
+    if (event.tradeType === 'SELL') {
+      const { sold, bought } = waveSoldBought(waveEvents)
+      const gapOk =
+        lastSellAtMs > 0 &&
+        event.createTime.getTime() - lastSellAtMs >= LIVE_CYCLE_SELL_GAP_MS
+      const hadBuys = bought >= MIN_CYCLE_USDT
+      const fullyClosedLots =
+        lotSum(sellLots) < MIN_CYCLE_USDT && lotSum(buyLots) < MIN_CYCLE_USDT
+      const nearlyDone =
+        sold >= MIN_CYCLE_USDT && hadBuys && bought / sold >= 0.95
+
+      if (
+        waveEvents.length > 0 &&
+        (fullyClosedLots || (gapOk && hadBuys) || (nearlyDone && gapOk) || sold >= LIVE_CYCLE_MAX_WAVE_USDT)
+      ) {
+        beginNewWaveWithResidualAndSell(event)
+      } else if (waveEvents.length === 0) {
+        waveEvents = [event]
+      } else {
+        waveEvents.push(event)
+      }
+
+      sellLots.push({
+        amount: event.amount,
+        fiatAmount: event.fiatAmount,
+        commission: event.commission,
+        paymentMethod: event.paymentMethod,
+      })
+      lastSellAtMs = event.createTime.getTime()
+      matchWaveLots()
+    } else {
+      if (waveEvents.length === 0 && lotSum(sellLots) < MIN_CYCLE_USDT) {
+        continue
+      }
+      if (waveEvents.length === 0) {
+        // Remanente en lots sin wave (no debería pasar) → reconstruir
+        waveEvents = residualFromSellLots()
+      }
+      waveEvents.push(event)
+      buyLots.push({
+        amount: event.amount,
+        fiatAmount: event.fiatAmount,
+        commission: event.commission,
+        paymentMethod: event.paymentMethod,
+      })
+      matchWaveLots()
+    }
+
+    if (waveEvents.length > 0 && shouldSoftCloseWave(waveEvents)) {
+      const { sold, bought } = waveSoldBought(waveEvents)
+      if (sold <= LIVE_CYCLE_MAX_WAVE_USDT * 1.2) {
+        lastClosedWaveEvents = waveEvents
+      }
+      // Cierre total → limpiar. Si queda remanente, SE MANTIENE la ola completa
+      // (con ventas+compras) para que el panel siga mostrando matched/ganancia.
+      if (lotSum(sellLots) < MIN_CYCLE_USDT && bought + MIN_CYCLE_USDT >= sold) {
+        waveEvents = []
+        sellLots = []
+        buyLots = []
+      }
+    }
+  }
+
+  const cycleEventsForLive =
+    waveEvents.length > 0 ? waveEvents : lastClosedWaveEvents ?? []
+
+  // Análisis en vivo del ciclo abierto (mismo criterio que el análisis manual)
+  let liveCycleActive = false
+  let liveCycleSoldUsdt = 0
+  let liveCycleBoughtUsdt = 0
+  let liveCycleSellBs = 0
+  let liveCycleBuyBs = 0
+  let liveCycleAvgSellPrice = 0
+  let liveCycleAvgBuyPrice = 0
+  let liveCycleMatchedUsdt = 0
+  let liveCycleSpread = 0
+  let liveCycleGrossBs = 0
+  let liveCyclePagoMovilFeeBs = 0
+  let liveCycleBinanceFeeBs = 0
+  let liveCycleNetBs = 0
+  let liveCycleNetUsdt = 0
+  let liveCycleAdFeeUsdt = 0
+  let liveCycleNetUsdtAfterAd = 0
+  let liveCycleProfitPercent = 0
+  let liveCycleProgressPercent = 0
+  let liveCycleRemainingToBuyUsdt = 0
+  let liveCycleRemainingBuyBs = 0
+  let liveCycleInventoryUsdt = 0
+  let liveCycleCashDiffBs = 0
+
+  if (cycleEventsForLive.length > 0) {
+    const cycleSells = cycleEventsForLive.filter((e) => e.tradeType === 'SELL')
+    const cycleBuys = cycleEventsForLive.filter((e) => e.tradeType === 'BUY')
+
+    liveCycleSoldUsdt = cycleSells.reduce((s, e) => s + e.amount, 0)
+    liveCycleBoughtUsdt = cycleBuys.reduce((s, e) => s + e.amount, 0)
+    liveCycleSellBs = cycleSells.reduce((s, e) => s + e.fiatAmount, 0)
+    liveCycleBuyBs = cycleBuys.reduce((s, e) => s + e.fiatAmount, 0)
+    liveCycleAvgSellPrice =
+      liveCycleSoldUsdt > 0 ? liveCycleSellBs / liveCycleSoldUsdt : 0
+    liveCycleAvgBuyPrice =
+      liveCycleBoughtUsdt > 0 ? liveCycleBuyBs / liveCycleBoughtUsdt : 0
+    liveCycleMatchedUsdt =
+      liveCycleSoldUsdt > 0 && liveCycleBoughtUsdt > 0
+        ? Math.min(liveCycleSoldUsdt, liveCycleBoughtUsdt)
+        : 0
+    liveCycleSpread =
+      liveCycleAvgSellPrice > 0 && liveCycleAvgBuyPrice > 0
+        ? liveCycleAvgSellPrice - liveCycleAvgBuyPrice
+        : 0
+    liveCycleGrossBs =
+      liveCycleMatchedUsdt > 0 ? liveCycleMatchedUsdt * liveCycleSpread : 0
+
+    const pmSellFiat = cycleSells
+      .filter((e) => isPagoMovilMethod(e.paymentMethod))
+      .reduce((s, e) => s + e.fiatAmount, 0)
+    const pmBuyFiat = cycleBuys
+      .filter((e) => isPagoMovilMethod(e.paymentMethod))
+      .reduce((s, e) => s + e.fiatAmount, 0)
+    const feePmSell = pmSellFiat * (PAGO_MOVIL_FEE_PERCENT / 100)
+    const feePmBuy = pmBuyFiat * (PAGO_MOVIL_FEE_PERCENT / 100)
+    const feeBinSell = cycleSells.reduce((s, e) => s + e.commission, 0)
+    const feeBinBuy = cycleBuys.reduce((s, e) => s + e.commission, 0)
+
+    const sellRatio =
+      liveCycleSoldUsdt > 0 ? liveCycleMatchedUsdt / liveCycleSoldUsdt : 0
+    const buyRatio =
+      liveCycleBoughtUsdt > 0 ? liveCycleMatchedUsdt / liveCycleBoughtUsdt : 0
+    liveCyclePagoMovilFeeBs = feePmSell * sellRatio + feePmBuy * buyRatio
+    liveCycleBinanceFeeBs = feeBinSell * sellRatio + feeBinBuy * buyRatio
+    liveCycleNetBs =
+      liveCycleGrossBs - liveCyclePagoMovilFeeBs - liveCycleBinanceFeeBs
+    liveCycleNetUsdt =
+      liveCycleAvgBuyPrice > 0 ? liveCycleNetBs / liveCycleAvgBuyPrice : 0
+    liveCycleAdFeeUsdt = liveCycleBoughtUsdt * 0.2 / 1000
+    liveCycleNetUsdtAfterAd = liveCycleNetUsdt - liveCycleAdFeeUsdt
+    const matchedCostBs = liveCycleMatchedUsdt * liveCycleAvgBuyPrice
+    liveCycleProfitPercent =
+      matchedCostBs > 0 ? (liveCycleNetBs / matchedCostBs) * 100 : 0
+    liveCycleInventoryUsdt = liveCycleBoughtUsdt - liveCycleSoldUsdt
+    liveCycleCashDiffBs = liveCycleSellBs - liveCycleBuyBs
+    liveCycleRemainingToBuyUsdt = Math.max(0, liveCycleSoldUsdt - liveCycleBoughtUsdt)
+    liveCycleRemainingBuyBs =
+      liveCycleAvgBuyPrice > 0
+        ? liveCycleRemainingToBuyUsdt * liveCycleAvgBuyPrice
+        : latestBuyPrice > 0
+          ? liveCycleRemainingToBuyUsdt * latestBuyPrice
+          : 0
+    liveCycleProgressPercent =
+      liveCycleSoldUsdt > 0
+        ? Math.min((liveCycleBoughtUsdt / liveCycleSoldUsdt) * 100, 100)
+        : liveCycleBoughtUsdt > 0
+          ? 100
+          : 0
+    liveCycleActive =
+      liveCycleSoldUsdt >= MIN_CYCLE_USDT || liveCycleBoughtUsdt >= MIN_CYCLE_USDT
   }
 
   const manualBuyEquivalent = manualAdjustments
@@ -508,5 +831,37 @@ export async function computeDashboardMetrics(
     estimatedROI,
     buyPriceTrend,
     isGapTooSmall,
+    todayMatchedUsdt,
+    todayAvgBuyPrice,
+    todayAvgSellPrice,
+    todaySpread,
+    todayEstimatedGrossBs,
+    todayPagoMovilFeeBs,
+    todayBinanceFeeBs,
+    todayEstimatedNetBs,
+    todayEstimatedNetUsdt,
+    todayEstimatedNetPerUsdt,
+    liveCycleActive,
+    liveCycleSoldUsdt,
+    liveCycleBoughtUsdt,
+    liveCycleSellBs,
+    liveCycleBuyBs,
+    liveCycleAvgSellPrice,
+    liveCycleAvgBuyPrice,
+    liveCycleMatchedUsdt,
+    liveCycleSpread,
+    liveCycleGrossBs,
+    liveCyclePagoMovilFeeBs,
+    liveCycleBinanceFeeBs,
+    liveCycleNetBs,
+    liveCycleNetUsdt,
+    liveCycleAdFeeUsdt,
+    liveCycleNetUsdtAfterAd,
+    liveCycleProfitPercent,
+    liveCycleProgressPercent,
+    liveCycleRemainingToBuyUsdt,
+    liveCycleRemainingBuyBs,
+    liveCycleInventoryUsdt,
+    liveCycleCashDiffBs,
   }
 }

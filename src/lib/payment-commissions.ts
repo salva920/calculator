@@ -73,7 +73,51 @@ export const PAYMENT_COMMISSIONS: PaymentCommissionConfig[] = [
     commission: 0, // Solo nombre del banco = transferencia al mismo banco (sin comisión)
     commissionType: 'percentage',
   },
+  {
+    method: 'Provincial',
+    commission: 0,
+    commissionType: 'percentage',
+  },
+  {
+    method: 'Banco Del Tesoro',
+    commission: 0,
+    commissionType: 'percentage',
+  },
+  {
+    method: 'BDDT',
+    commission: 0,
+    commissionType: 'percentage',
+  },
+  {
+    method: 'Bancaribe',
+    commission: 0,
+    commissionType: 'percentage',
+  },
+  {
+    method: 'Banco Plaza',
+    commission: 0,
+    commissionType: 'percentage',
+  },
+  {
+    method: 'Plaza',
+    commission: 0,
+    commissionType: 'percentage',
+  },
+  {
+    method: 'BANK',
+    commission: 0,
+    commissionType: 'percentage',
+  },
 ]
+
+/** Comisión Pago Móvil P2P persona a persona (hasta 0,30% del monto en Bs). */
+export const PAGO_MOVIL_FEE_PERCENT = 0.3
+
+export function isPagoMovilMethod(paymentMethod: string | null | undefined): boolean {
+  if (!paymentMethod) return false
+  const n = paymentMethod.trim().toLowerCase().replace(/\s+/g, '')
+  return n.includes('pagomovil') || n.includes('pagomóvil') || n.includes('pago_movil')
+}
 
 /**
  * Obtiene la configuración de comisión para un método de pago
@@ -92,10 +136,10 @@ export function getPaymentCommission(paymentMethod: string | null | undefined): 
   const normalizedMethod = paymentMethod.trim().toLowerCase()
 
   // PRIMERO: Verificar si contiene palabras clave especiales
-  if (normalizedMethod.includes('pago móvil') || normalizedMethod.includes('pagomovil')) {
+  if (isPagoMovilMethod(paymentMethod)) {
     return PAYMENT_COMMISSIONS.find((c) => c.method === 'Pago Móvil') || {
       method: 'Pago Móvil',
-      commission: 0.3,
+      commission: PAGO_MOVIL_FEE_PERCENT,
       commissionType: 'percentage',
     }
   }
@@ -144,11 +188,11 @@ export function getPaymentCommission(paymentMethod: string | null | undefined): 
     return bankMatch
   }
 
-  // Por defecto, si no contiene "transferencia" y no coincide con un banco, asumir 0.3%
-  // (podría ser Pago Móvil u otro método)
+  // Por defecto: transferencia mismo banco / método desconocido = 0%
+  // (solo Pago Móvil y transferencias marcadas aplican 0,30%)
   return {
     method: paymentMethod,
-    commission: 0.3,
+    commission: 0,
     commissionType: 'percentage',
   }
 }

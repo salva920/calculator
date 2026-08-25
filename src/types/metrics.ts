@@ -67,4 +67,43 @@ export interface DashboardMetrics {
   estimatedROI: number
   buyPriceTrend: 'increasing' | 'decreasing' | 'stable'
   isGapTooSmall: boolean
+  /** Estimación operativa del día (ops COMPLETED hoy), no FIFO histórico */
+  todayMatchedUsdt?: number
+  todayAvgBuyPrice?: number
+  todayAvgSellPrice?: number
+  todaySpread?: number
+  todayEstimatedGrossBs?: number
+  todayPagoMovilFeeBs?: number
+  todayBinanceFeeBs?: number
+  todayEstimatedNetBs?: number
+  todayEstimatedNetUsdt?: number
+  todayEstimatedNetPerUsdt?: number
+  /**
+   * Análisis en vivo del ciclo abierto (mismo criterio manual):
+   * matched × spread − PM 0,30% − fees Binance, con % y progreso de recompra.
+   */
+  liveCycleActive?: boolean
+  liveCycleSoldUsdt?: number
+  liveCycleBoughtUsdt?: number
+  liveCycleSellBs?: number
+  liveCycleBuyBs?: number
+  liveCycleAvgSellPrice?: number
+  liveCycleAvgBuyPrice?: number
+  liveCycleMatchedUsdt?: number
+  liveCycleSpread?: number
+  liveCycleGrossBs?: number
+  liveCyclePagoMovilFeeBs?: number
+  liveCycleBinanceFeeBs?: number
+  liveCycleNetBs?: number
+  liveCycleNetUsdt?: number
+  liveCycleAdFeeUsdt?: number
+  liveCycleNetUsdtAfterAd?: number
+  /** % neto sobre costo de recompra (matched × media compra) */
+  liveCycleProfitPercent?: number
+  /** Progreso de cierre: min(1, bought/sold) * 100 cuando hay ventas abiertas */
+  liveCycleProgressPercent?: number
+  liveCycleRemainingToBuyUsdt?: number
+  liveCycleRemainingBuyBs?: number
+  liveCycleInventoryUsdt?: number
+  liveCycleCashDiffBs?: number
 }

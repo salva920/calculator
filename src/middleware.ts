@@ -12,6 +12,7 @@ const PUBLIC_PATHS = new Set(['/login'])
 function isPublicPath(pathname: string): boolean {
   if (PUBLIC_PATHS.has(pathname)) return true
   if (pathname.startsWith('/api/auth/')) return true
+  if (pathname.startsWith('/api/cron/')) return true
   if (pathname === '/manifest.json') return true
   if (pathname === '/sw.js') return true
   if (pathname === '/icon.svg') return true
