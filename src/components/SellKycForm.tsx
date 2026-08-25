@@ -11,6 +11,7 @@ import {
   HStack,
   Image,
   Input,
+  SimpleGrid,
   Text,
   VStack,
   useToast,
@@ -23,6 +24,8 @@ import { isInlineImageRef } from '@/lib/store-upload-image'
 interface SellKycFormProps {
   transactionId: string
   orderNumber: string
+  /** Nick de Binance (contraparte); se usa para prellenar nombre si aún no hay KYC */
+  counterPartName?: string | null
 }
 
 interface SellKycResponse {
@@ -40,7 +43,11 @@ interface SellKycResponse {
 
 type KycImageField = 'idCardImage' | 'swornDeclarationImage' | 'sourceOfFundsImage'
 
-export default function SellKycForm({ transactionId, orderNumber }: SellKycFormProps) {
+export default function SellKycForm({
+  transactionId,
+  orderNumber,
+  counterPartName,
+}: SellKycFormProps) {
   const toast = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -49,7 +56,7 @@ export default function SellKycForm({ transactionId, orderNumber }: SellKycFormP
 
   const [accountNumber, setAccountNumber] = useState('')
   const [bankName, setBankName] = useState('')
-  const [fullName, setFullName] = useState('')
+  const [fullName, setFullName] = useState(counterPartName?.trim() || '')
   const [idNumber, setIdNumber] = useState('')
 
   const [files, setFiles] = useState<Record<KycImageField, File | null>>({
@@ -82,11 +89,15 @@ export default function SellKycForm({ transactionId, orderNumber }: SellKycFormP
         setLegacyImageFields(response.data.legacyImageFields ?? [])
         setBankName(kyc.bankName || '')
         setAccountNumber(kyc.accountNumber || '')
-        setFullName(kyc.fullName || '')
+        setFullName(kyc.fullName?.trim() || counterPartName?.trim() || '')
         setIdNumber(kyc.idNumber || '')
       } else {
         setExistingKyc(null)
         setLegacyImageFields([])
+        setBankName('')
+        setAccountNumber('')
+        setFullName(counterPartName?.trim() || '')
+        setIdNumber('')
       }
     } catch (error) {
       console.error('Error cargando KYC:', error)
@@ -286,9 +297,17 @@ export default function SellKycForm({ transactionId, orderNumber }: SellKycFormP
 
   return (
     <VStack align="stretch" spacing={3}>
-      <Text fontSize="sm" color="gray.600">
+      <Text fontSize="xs" color="gray.500">
         Orden: {orderNumber}
       </Text>
+      {Boolean(counterPartName?.trim()) && (
+        <Text fontSize="xs" color="gray.600">
+          Comprador Binance:{' '}
+          <Text as="span" fontWeight="600" color="gray.800">
+            {counterPartName}
+          </Text>
+        </Text>
+      )}
 
       {existingKyc && (
         <Alert status="success" borderRadius="md" py={2}>
@@ -297,41 +316,64 @@ export default function SellKycForm({ transactionId, orderNumber }: SellKycFormP
         </Alert>
       )}
 
-      <FormControl>
-        <FormLabel fontSize="sm">Banco</FormLabel>
-        <Input
-          value={bankName}
-          onChange={(e) => setBankName(e.target.value)}
-          placeholder="Ej: Banesco"
-        />
-      </FormControl>
+      <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={3}>
+        <FormControl>
+          <FormLabel fontSize="sm" mb={1}>
+            Banco
+          </FormLabel>
+          <Input
+            size="sm"
+            value={bankName}
+            onChange={(e) => setBankName(e.target.value)}
+            placeholder="Ej: Banesco"
+          />
+        </FormControl>
 
-      <FormControl>
-        <FormLabel fontSize="sm">Número de cuenta</FormLabel>
-        <Input
-          value={accountNumber}
-          onChange={(e) => setAccountNumber(e.target.value)}
-          placeholder="Ej: 0102-0123-45-1234567890"
-        />
-      </FormControl>
+        <FormControl>
+          <FormLabel fontSize="sm" mb={1}>
+            Número de cuenta
+          </FormLabel>
+          <Input
+            size="sm"
+            value={accountNumber}
+            onChange={(e) => setAccountNumber(e.target.value)}
+            placeholder="Ej: 0102-0123-45-1234567890"
+          />
+        </FormControl>
 
-      <FormControl>
-        <FormLabel fontSize="sm">Nombre completo</FormLabel>
-        <Input
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-          placeholder="Nombre y apellido"
-        />
-      </FormControl>
+        <FormControl>
+          <FormLabel fontSize="sm" mb={1}>
+            Nombre completo
+          </FormLabel>
+          <Input
+            size="sm"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder={
+              counterPartName?.trim()
+                ? `Nick Binance: ${counterPartName}`
+                : 'Nombre y apellido'
+            }
+          />
+          {Boolean(counterPartName?.trim()) && !existingKyc?.fullName && (
+            <Text fontSize="10px" color="gray.500" mt={1}>
+              Prefill con nick de Binance; cámbialo si el nombre del banco es distinto.
+            </Text>
+          )}
+        </FormControl>
 
-      <FormControl>
-        <FormLabel fontSize="sm">Cédula</FormLabel>
-        <Input
-          value={idNumber}
-          onChange={(e) => setIdNumber(e.target.value)}
-          placeholder="Ej: V12345678"
-        />
-      </FormControl>
+        <FormControl>
+          <FormLabel fontSize="sm" mb={1}>
+            Cédula
+          </FormLabel>
+          <Input
+            size="sm"
+            value={idNumber}
+            onChange={(e) => setIdNumber(e.target.value)}
+            placeholder="Ej: V12345678"
+          />
+        </FormControl>
+      </SimpleGrid>
 
       {renderImageField('idCardImage', 'Cédula (imagen)', existingKyc?.idCardImageUrl)}
       {renderImageField(
@@ -351,6 +393,7 @@ export default function SellKycForm({ transactionId, orderNumber }: SellKycFormP
         isLoading={isSaving || isLoading}
         loadingText="Guardando..."
         leftIcon={existingKyc ? <FaSave /> : <FaUpload />}
+        mt={1}
       >
         {existingKyc ? 'Actualizar KYC' : 'Registrar KYC'}
       </Button>

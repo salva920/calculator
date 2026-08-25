@@ -86,7 +86,14 @@ function mapUserOrderHistoryRow(order: any, tradeType: 'BUY' | 'SELL'): BinanceP
     createTime,
     completionTimeMs: extractBinanceCompletionMs(order),
     commission: String(order.commission || 0),
-    counterPartName: order.counterPartName || order.counterpartNickname || '',
+    counterPartName:
+      order.counterPartName ||
+      order.counterpartNickname ||
+      order.counterPartyNickName ||
+      order.buyerNickname ||
+      order.sellerNickname ||
+      order.nickName ||
+      '',
     paymentMethod: extractPaymentMethod(order),
   }
 }
