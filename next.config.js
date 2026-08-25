@@ -4,7 +4,9 @@ const nextConfig = {
     domains: ['localhost', 'api.binance.com'],
   },
   // Evita que el file tracer de Next recorra el árbol nativo de sharp (stack overflow en Vercel)
-  serverExternalPackages: ['sharp', 'tesseract.js'],
+  experimental: {
+    serverComponentsExternalPackages: ['sharp', 'tesseract.js'],
+  },
   webpack: (config) => {
     config.resolve.extensionAlias = {
       '.js': ['.js', '.ts', '.tsx'],
